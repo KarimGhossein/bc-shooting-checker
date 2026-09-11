@@ -1,0 +1,17 @@
+{
+  "name": "bc-shooting-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A map tool that answers \"is it legal to shoot here?\" for a picked point in British Columbia, by merging live queries against BC's open geospatial data into one plain-language, colour-coded report.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "playwright": "^1.48.0"
+  },
+  "license": "UNLICENSED"
+}
