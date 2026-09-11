@@ -400,6 +400,16 @@
      size beside it. */
   .ma-row{display:flex;align-items:center;gap:6px;}
   .ma-row .ma-btn{flex:1 1 auto;min-width:0;}
+  /* v86: the Clear button's dropdown -- one clear action per category,
+     replacing the old separate "Clear Potential Spots"/"Clear All" buttons.
+     Anchored off #clearMenuRow (position:relative), same floating-panel
+     look as .tb-search-results above (border/radius/shadow), just narrower
+     and row-height-sized for menu items instead of search results. */
+  #clearMenuRow{position:relative;}
+  .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:6px;z-index:10;}
+  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);}
+  .clear-menu-item:last-child{margin-bottom:0;}
+  .clear-menu-item:hover{background:var(--bg);}
 
   /* bottom offset accounts for the fixed bottom report drawer's collapsed
      handle (v41) so this doesn't sit underneath it. v76: the left edge is
@@ -823,10 +833,15 @@
           <button class="ma-btn" id="revealRoadBtn">🛣️ Reveal Road</button>
           <button type="button" class="info-btn" id="roadInfoBtn" title="What this button does" aria-label="What this button does">i</button>
         </div>
-        <button class="ma-btn" id="clearSpotsBtn" hidden>✖ Clear Potential Spots</button>
-        <div class="ma-row">
-          <button class="ma-btn" id="clearAllBtn">🧹 Clear All</button>
-          <button type="button" class="info-btn" id="clearAllInfoBtn" title="What this button does" aria-label="What this button does">i</button>
+        <div class="ma-row" id="clearMenuRow">
+          <button type="button" class="ma-btn" id="clearMenuBtn" aria-haspopup="true" aria-expanded="false">🧹 Clear ▾</button>
+          <button type="button" class="info-btn" id="clearInfoBtn" title="What this button does" aria-label="What this button does">i</button>
+          <div class="clear-menu" id="clearMenu" hidden>
+            <button type="button" class="clear-menu-item" id="clearParcelsBtn">🗺️ View Parcels</button>
+            <button type="button" class="clear-menu-item" id="clearSpotsMenuBtn">🎯 Shooting Spots</button>
+            <button type="button" class="clear-menu-item" id="clearRoadMenuBtn">🛣️ Reveal Road</button>
+            <button type="button" class="clear-menu-item" id="clearLocationBtn">📍 Selected Location</button>
+          </div>
         </div>
         <div class="td-status">
           <div class="spots-progress" id="spotsProgress" hidden>
@@ -1094,16 +1109,34 @@ document.getElementById('spotsInfoBtn').addEventListener('click', () => openInfo
 const ROAD_VIEW_BLURB_HTML = `<div class="mrow">Queries two BC road networks directly for everything inside whatever's currently in view, and draws them on the map: the Digital Road Atlas (BC's general public road network -- rust/orange for a listed major highway's wider Wildlife Act buffer, slate for the 25m default), plus FTEN Road Section Lines (forest service and resource roads, including branches -- tan, or grey if retired). Hover any road for its class, status, and (for public roads) exact buffer distance.</div><div class="mrow" style="margin-top:8px">Only looks at the area on screen right now — it doesn't run automatically as you pan or zoom, so press it again after moving to update.</div><div class="mrow" style="margin-top:8px">The public-road half is the same layer Shooting Spots already draws as part of its own buffer check -- this button just lets you see the full road picture, public and forestry, without running the full Crown-land/park/municipality check too.</div>`;
 document.getElementById('roadInfoBtn').addEventListener('click', () => openInfoModal('🛣️ Reveal Road', ROAD_VIEW_BLURB_HTML));
 
-// v82: "Clear All" -- one button for every temporary/queried thing this app
-// draws (View Parcels, Shooting Spots, Reveal Road, and the currently
-// selected location's own pin/highlight/report), instead of hunting down
-// "Clear Potential Spots" plus re-picking a location just to reset the rest.
+// v86: "Clear" -- replaces the old separate "Clear Potential Spots" shortcut
+// and "Clear All" button with a single dropdown offering one clear action
+// per category (View Parcels, Shooting Spots, Reveal Road, Selected
+// Location), so clearing one thing no longer means clearing everything.
 // Deliberately does not touch the separate onX-style markup layer/store at
 // all (see the "custom map markup" section below) -- Karim was specific that
 // his own drawn pins/lines/areas are not "temporary" and shouldn't be
-// affected by this button.
-const CLEAR_ALL_BLURB_HTML = `<div class="mrow">Clears every temporary map element this app draws on demand or per-click: View Parcels, Shooting Spots (including active-cutblock outlines/buffers), Reveal Road, and the currently selected location itself -- its pin, its own highlight, and the report drawer below.</div><div class="mrow" style="margin-top:8px">Your own drawn markup (pins/lines/areas from the draw toolbar, under "My markup") is a completely separate thing and is never touched by this button.</div>`;
-document.getElementById('clearAllInfoBtn').addEventListener('click', () => openInfoModal('🧹 Clear All', CLEAR_ALL_BLURB_HTML));
+// affected by any of these.
+const CLEAR_BLURB_HTML = `<div class="mrow">Opens a list of one clear action per category: View Parcels, Shooting Spots (including active-cutblock outlines/buffers), Reveal Road, and the currently selected location itself -- its pin, its own highlight, and the report drawer below. Pick one to clear just that -- the others are left exactly as they are.</div><div class="mrow" style="margin-top:8px">Your own drawn markup (pins/lines/areas from the draw toolbar, under "My markup") is a completely separate thing and is never touched by any of these.</div>`;
+document.getElementById('clearInfoBtn').addEventListener('click', () => openInfoModal('🧹 Clear', CLEAR_BLURB_HTML));
+
+// Dropdown open/close: toggle on the trigger button, close on an outside
+// click or after any menu item runs -- same interaction shape as every
+// other icon-triggered popover on this page.
+const clearMenuEl = document.getElementById('clearMenu');
+const clearMenuBtnEl = document.getElementById('clearMenuBtn');
+function closeClearMenu(){
+  clearMenuEl.hidden = true;
+  clearMenuBtnEl.setAttribute('aria-expanded', 'false');
+}
+clearMenuBtnEl.addEventListener('click', () => {
+  const willOpen = clearMenuEl.hidden;
+  clearMenuEl.hidden = !willOpen;
+  clearMenuBtnEl.setAttribute('aria-expanded', String(willOpen));
+});
+document.addEventListener('click', e => {
+  if(!clearMenuEl.hidden && !e.target.closest('#clearMenuRow')) closeClearMenu();
+});
 
 // ---------------- collapsible legend ----------------
 // The 16-row map key starts collapsed so it doesn't sit permanently over the
@@ -4838,10 +4871,6 @@ async function runPotentialSpotsSearch(area){
   spotLayer.clearLayers();
   resetClickableSource('spots'); // v83 -- see the declaration up top; every push below is now tagged 'spots'
   spotDetails = []; gapDetails = []; restrictedDetails = []; // v45/v57 -- reset each run so a popup's "i" index always points at this run's detail text, not a stale one from the previous press
-  // v67: "Clear Potential Spots" starts hidden (nothing to clear until a
-  // location has actually been checked at least once) and appears here, the
-  // moment a real run starts drawing.
-  document.getElementById('clearSpotsBtn').hidden = false;
   // v47 -- buffers drawn first (bottom of the stack) so the outlines and the
   // spots themselves render on top of the shaded zone and stay clickable.
   renderActiveCutblockBuffers(activeCuts, spotLayer); // shaded buffer zone around each active cutblock
@@ -5131,54 +5160,68 @@ function radiusCql(geomField, lat, lng, radiusM, extraFilter){
   return extraFilter ? `${spatial} AND ${extraFilter}` : spatial;
 }
 
-// v53: Karim asked for a way to clear Potential Spots' shapes (teal/purple
-// spots, active-cutblock outlines and buffer zones) without re-running the
-// query -- e.g. after panning somewhere new, or just to declutter the map.
-// Only touches spotLayer -- "View Parcels" (parcelViewLayer) is a separate
-// feature/button and is left alone, since Karim's ask was specifically about
-// the shooting-spot layer, not the plain parcel-ownership tint.
+// v86: one clear function per category, each touching only its own
+// layer + its own currentClickableFeatures entries (tagged by source --
+// see the v83 comment up near resetClickableSource()) -- replaces the old
+// single "Clear All" (v82) and the separate "Clear Potential Spots" (v53)
+// shortcut, now that both are menu items in the "Clear" dropdown instead of
+// their own buttons. None of these ever touch drawnItems/markupItems/
+// localStorage (see the "custom map markup" section below) -- Karim's own
+// drawn pins/lines/areas are a completely separate, deliberately-saved
+// thing, not "temporary," and are never in scope for any Clear action.
+function setMapActionsNote(msg){
+  const noteEl = document.getElementById('mapActionsNote');
+  if(noteEl) noteEl.textContent = msg;
+}
+
+// Clears Potential/Shooting Spots' shapes (teal/purple spots, restricted-red
+// portions, active-cutblock outlines and buffer zones) without re-running
+// the query -- e.g. after panning somewhere new, or just to declutter the
+// map. Only touches spotLayer -- View Parcels/Reveal Road/the selected
+// location are separate categories, each cleared by their own function below.
 function clearPotentialSpots(){
   spotLayer.clearLayers();
   currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== 'spots'); // v83: drop the shared chooser's own record of these shapes too
   spotDetails = []; gapDetails = []; restrictedDetails = []; // same reset runPotentialSpotsSearch() does -- nothing should be left pointing at stale detail HTML
-  document.getElementById('clearSpotsBtn').hidden = true; // v67: hide again until the next run draws something new -- nothing left to clear
   document.getElementById('spotsProgress').hidden = true; // safety net -- normally already hidden by the time a run finishes drawing
-  const noteEl = document.getElementById('mapActionsNote');
-  if(noteEl) noteEl.textContent = "Potential spots cleared. Pick a location (click the map, drag the pin, search, or enter coordinates) or press \"Shooting Spots\" to check again.";
+  setMapActionsNote("Potential spots cleared. Pick a location (click the map, drag the pin, search, or enter coordinates) or press \"Shooting Spots\" to check again.");
 }
-document.getElementById('clearSpotsBtn').addEventListener('click', clearPotentialSpots);
 
-// v82: Karim asked for a single "Clear All" that resets every temporary map
-// element in one press -- View Parcels, Shooting Spots (reuses
-// clearPotentialSpots() itself rather than re-implementing its detail-array
-// reset), Reveal Road, and the currently selected location (pin, its own
-// click-report highlight, and the report drawer, mirroring in reverse
-// exactly what runLookup() above sets up when a location is picked).
-// Deliberately never touches drawnItems/markupItems/localStorage (see the
-// "custom map markup" section below) -- Karim's own drawn pins/lines/areas
-// are a completely separate, deliberately-saved thing, not "temporary."
-function clearAllTemporary(){
+function clearViewParcels(){
   parcelViewLayer.clearLayers();
   parcelViewFeatures = [];
+  currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== 'parcelview');
+  setMapActionsNote('View Parcels cleared. Press "View Parcels" again to redraw whatever\'s currently in view.');
+}
+
+function clearRevealRoad(){
   roadViewLayer.clearLayers();
-  clearPotentialSpots(); // clears spotLayer + its own detail arrays/buttons/progress bar
+  currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== 'roadview');
+  setMapActionsNote('Reveal Road cleared. Press "Reveal Road" again to redraw whatever\'s currently in view.');
+}
+
+// Clears the currently selected location itself -- its pin, its own
+// click-report highlight, and the report drawer -- mirroring in reverse
+// exactly what runLookup() sets up when a location is picked. Leaves View
+// Parcels/Shooting Spots/Reveal Road exactly as they are; those are
+// independent categories with their own clear actions above.
+function clearSelectedLocation(){
   overlayLayer.clearLayers();
   if(marker){ map.removeLayer(marker); marker = null; }
-  // Same "nothing should be left pointing at stale detail HTML" reasoning as
-  // clearPotentialSpots() above -- these all describe the now-cleared selection.
-  currentClickableFeatures = [];
+  currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== 'overlay');
   currentNearbyMatches = [];
   currentCutOpenings = [];
   document.getElementById('report').innerHTML = `<p class="empty">Pick a location to see its parcel, municipal, protected‑area and forestry status here.</p>`;
   document.getElementById('bottomPanelSummary').textContent = "📋 Pick a location to see its report";
   document.getElementById('bottomPanel').classList.remove('open');
   setSearchStatus('No location selected yet.');
-  // Overwrites the note clearPotentialSpots() just set above with one that
-  // covers everything this button actually did, not just the spots half.
-  const noteEl = document.getElementById('mapActionsNote');
-  if(noteEl) noteEl.textContent = "Cleared View Parcels, Shooting Spots, Reveal Road, and the selected location. Your own drawn markup is untouched.";
+  setMapActionsNote('Selected location cleared. Your own drawn markup is untouched.');
 }
-document.getElementById('clearAllBtn').addEventListener('click', clearAllTemporary);
+
+document.getElementById('clearParcelsBtn').addEventListener('click', () => { clearViewParcels(); closeClearMenu(); });
+document.getElementById('clearSpotsMenuBtn').addEventListener('click', () => { clearPotentialSpots(); closeClearMenu(); });
+document.getElementById('clearRoadMenuBtn').addEventListener('click', () => { clearRevealRoad(); closeClearMenu(); });
+document.getElementById('clearLocationBtn').addEventListener('click', () => { clearSelectedLocation(); closeClearMenu(); });
 
 function fmtDate(d){ return d ? d.substring(0,10) : "—"; }
 
