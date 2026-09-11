@@ -1091,7 +1091,7 @@ document.getElementById('spotsInfoBtn').addEventListener('click', () => openInfo
 // renderNearbyRoads() and classifyDraRoads(), both further down) so a road
 // revealed this way looks and behaves identically to one already drawn by
 // Shooting Spots -- same colour-by-buffer-distance, same hover tooltip.
-const ROAD_VIEW_BLURB_HTML = `<div class="mrow">Queries BC's Digital Road Atlas directly for every public road inside whatever's currently in view, and draws them on the map -- rust/orange for a listed major highway's wider Wildlife Act buffer, slate for the 25m default. Hover any road for its class and exact buffer distance.</div><div class="mrow" style="margin-top:8px">Only looks at the area on screen right now — it doesn't run automatically as you pan or zoom, so press it again after moving to update.</div><div class="mrow" style="margin-top:8px">These are the same roads Shooting Spots already draws as part of its own buffer check -- this button just lets you see them on their own, without running the full Crown-land/park/municipality check too.</div>`;
+const ROAD_VIEW_BLURB_HTML = `<div class="mrow">Queries two BC road networks directly for everything inside whatever's currently in view, and draws them on the map: the Digital Road Atlas (BC's general public road network -- rust/orange for a listed major highway's wider Wildlife Act buffer, slate for the 25m default), plus FTEN Road Section Lines (forest service and resource roads, including branches -- tan, or grey if retired). Hover any road for its class, status, and (for public roads) exact buffer distance.</div><div class="mrow" style="margin-top:8px">Only looks at the area on screen right now — it doesn't run automatically as you pan or zoom, so press it again after moving to update.</div><div class="mrow" style="margin-top:8px">The public-road half is the same layer Shooting Spots already draws as part of its own buffer check -- this button just lets you see the full road picture, public and forestry, without running the full Crown-land/park/municipality check too.</div>`;
 document.getElementById('roadInfoBtn').addEventListener('click', () => openInfoModal('🛣️ Reveal Road', ROAD_VIEW_BLURB_HTML));
 
 // v82: "Clear All" -- one button for every temporary/queried thing this app
@@ -3007,6 +3007,27 @@ function roadPopup(props){
     <span style="color:#6b7380">This is the road's forest‑tenure administrative status (permit holder, retired or not) — not real‑time drivability. It won't show washouts, deactivations, snow, or gates.</span>
   </div>`;
 }
+// v85: pulled out of renderMapOverlays()'s own inline forEach so Reveal Road
+// can draw the exact same forest-tenure road network (FTEN Road Section
+// Lines -- LAYERS.road), styled and popup'd identically, instead of only
+// ever drawing BC's general public road network (DRA). See the v85 build
+// notes section for why DRA alone was the actual bug Karim reported.
+function renderForestServiceRoads(features, targetLayer){
+  (features || []).forEach(f => {
+    if(!f.geometry) return;
+    const retired = !!f.properties.RETIREMENT_DATE;
+    const color = retired ? "#8f96a3" : "#c98a1f";
+    // bubblingMouseEvents:false -- same reasoning as every other overlay
+    // layer: without it, a click here also reaches the map underneath and
+    // re-selects that point as a brand-new location.
+    L.geoJSON(f, {style:{color, weight:3.5}, bubblingMouseEvents:false})
+      .bindTooltip(roadPopup(f.properties), {sticky:true, direction:"top", opacity:0.97, className:"road-tooltip"})
+      .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
+      .addTo(targetLayer);
+    const roadLabel = esc(f.properties.ROAD_SECTION_NAME || f.properties.MAP_LABEL || "Forest service road");
+    pushClickable(f.geometry, '🛣️', `${roadLabel} — ${retired ? "retired" : "active"}`, '🛣️ Road access', roadPopup(f.properties));
+  });
+}
 
 function recreationPopup(entry){
   const rows = [];
@@ -3143,26 +3164,13 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     });
   }
 
-  if(roadR && roadR.ok && roadR.features.length){
-    roadR.features.forEach(f => {
-      const retired = !!f.properties.RETIREMENT_DATE;
-      const color = retired ? "#8f96a3" : "#c98a1f";
-      // Roads still show info on hover -- a sticky tooltip that follows the
-      // cursor, appearing without a click -- but as of v79 a click on one
-      // *also* joins the shared cross-layer chooser below, the same as
-      // every other layer, instead of being the one layer with no click
-      // behaviour of its own. Still needs bubblingMouseEvents:false: without
-      // it, a click on the road (even with no handler of its own) still
-      // reaches the map underneath and re-selects that point as a new
-      // location.
-      L.geoJSON(f, {style:{color, weight:3.5}, bubblingMouseEvents:false})
-        .bindTooltip(roadPopup(f.properties), {sticky:true, direction:"top", opacity:0.97, className:"road-tooltip"})
-        .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
-        .addTo(overlayLayer);
-      const roadLabel = esc(f.properties.ROAD_SECTION_NAME || f.properties.MAP_LABEL || "Forest service road");
-      pushClickable(f.geometry, '🛣️', `${roadLabel} — ${retired ? "retired" : "active"}`, '🛣️ Road access', roadPopup(f.properties));
-    });
-  }
+  // Roads still show info on hover -- a sticky tooltip that follows the
+  // cursor, appearing without a click -- but as of v79 a click on one *also*
+  // joins the shared cross-layer chooser, the same as every other layer.
+  // v85: drawing itself moved into renderForestServiceRoads() (near
+  // roadPopup(), above) so Reveal Road can draw the identical thing --
+  // see the v85 build notes section.
+  if(roadR && roadR.ok && roadR.features.length) renderForestServiceRoads(roadR.features, overlayLayer);
 
   // v81: fill:false (outline only, no painted interior) used to be the
   // style here -- but a browser's SVG hit-testing (pointer-events:
@@ -3459,14 +3467,25 @@ document.getElementById('revealParcelsBtn').addEventListener('click', revealAllP
 
 // v82: "Reveal Road" -- same view-scoped, on-demand shape as revealAllParcels()
 // just above (zoom-gated, INTERSECTS query against the current viewport,
-// disable-while-loading, a status note when done), querying DRA roads
-// specifically and drawing them with the exact same styling/tooltip
-// (draRoadStyle/draRoadTooltip via renderNearbyRoads(), both further down)
-// that Shooting Spots already uses for its own road-buffer drawing --
-// classifyDraRoads() (also further down) does the shared "which buffer
-// distance applies" classification both callers need.
+// disable-while-loading, a status note when done), drawing results with the
+// exact same styling/tooltip each road type already uses elsewhere in the
+// app -- classifyDraRoads()/renderNearbyRoads() (further down) for BC's
+// general public road network, renderForestServiceRoads() (near roadPopup(),
+// shared with the single-click report) for forest-tenure roads.
+//
+// v85 fix: this used to query *only* BC's Digital Road Atlas (DRA) -- the
+// general public road network (highways, arterials, local streets). Karim
+// reported "only revealing main roads," not the branch/forestry roads he
+// expected. Root cause: DRA simply isn't where BC publishes most forest
+// service/resource road branches -- that's a separate dataset, FTEN Road
+// Section Lines (WHSE_FOREST_TENURE.FTEN_ROAD_SECTION_LINES_SVW, LAYERS.road),
+// which this app has queried and drawn for the single-click report since the
+// very first forest-service-road feature -- Reveal Road just never queried
+// it. Fixed by firing both queries in parallel against the viewport and
+// drawing whichever succeed, instead of DRA alone -- see the v85 section in
+// the build notes.
 const ROAD_VIEW_MIN_ZOOM = 9; // v84 fix -- was 11, three notches tighter than PARCEL_VIEW_MIN_ZOOM (8) despite this same comment already saying "one notch tighter"; matches SPOT_MIN_ZOOM (9), which the comment actually describes -- see the v84 section in the build notes
-const ROAD_VIEW_MAX_FEATURES = 1500; // same cap the Shooting Spots road query already uses
+const ROAD_VIEW_MAX_FEATURES = 1500; // same cap the Shooting Spots road query already uses -- applied per road type below, not combined
 let roadViewSeq = 0;
 async function revealAllRoads(){
   const btn = document.getElementById('revealRoadBtn');
@@ -3480,19 +3499,32 @@ async function revealAllRoads(){
   const origLabel = btn.textContent;
   btn.disabled = true; btn.classList.add('busy'); btn.textContent = "🛣️ Loading…";
   if(noteEl) noteEl.textContent = "Loading roads for the current view…";
-  const res = await queryLayer(LAYERS.draRoad.typeName, viewportBboxCql(LAYERS.draRoad.geom, map.getBounds()), 15000, ROAD_VIEW_MAX_FEATURES);
+  const bounds = map.getBounds();
+  const [draRes, fsrRes] = await Promise.all([
+    queryLayer(LAYERS.draRoad.typeName, viewportBboxCql(LAYERS.draRoad.geom, bounds), 15000, ROAD_VIEW_MAX_FEATURES),
+    queryLayer(LAYERS.road.typeName, viewportBboxCql(LAYERS.road.geom, bounds), 15000, ROAD_VIEW_MAX_FEATURES),
+  ]);
   if(seq !== roadViewSeq) return; // a newer press superseded this one
   btn.disabled = false; btn.classList.remove('busy'); btn.textContent = origLabel;
-  if(!res.ok){
-    if(noteEl) noteEl.textContent = `Couldn't load roads (${res.error || "unknown error"}) — try again in a few seconds.`;
+  if(!draRes.ok && !fsrRes.ok){
+    if(noteEl) noteEl.textContent = `Couldn't load roads (${draRes.error || fsrRes.error || "unknown error"}) — try again in a few seconds.`;
     return;
   }
   roadViewLayer.clearLayers();
   resetClickableSource('roadview'); // v83 -- see the declaration up top
-  renderNearbyRoads(classifyDraRoads(res.features), roadViewLayer);
+  if(draRes.ok) renderNearbyRoads(classifyDraRoads(draRes.features), roadViewLayer);
+  if(fsrRes.ok) renderForestServiceRoads(fsrRes.features, roadViewLayer);
   if(noteEl){
     const n = roadViewLayer.getLayers().length;
-    noteEl.textContent = `${n} road${n===1?'':'s'} shown for this view -- rust/orange marks a listed major highway's wider buffer, slate the 25m default; hover any road for details${res.features.length >= ROAD_VIEW_MAX_FEATURES ? ' (capped — zoom in and press again for full coverage)' : ''}. Pan/zoom then press the button again to update.`;
+    const capped = [];
+    if(draRes.ok && draRes.features.length >= ROAD_VIEW_MAX_FEATURES) capped.push('public roads');
+    if(fsrRes.ok && fsrRes.features.length >= ROAD_VIEW_MAX_FEATURES) capped.push('forest service roads');
+    const failed = [];
+    if(!draRes.ok) failed.push('public roads');
+    if(!fsrRes.ok) failed.push('forest service roads');
+    const cappedNote = capped.length ? ` (capped on ${capped.join(' and ')} — zoom in and press again for full coverage)` : '';
+    const failedNote = failed.length ? ` (couldn't load ${failed.join(' or ')} this time — try again in a few seconds)` : '';
+    noteEl.textContent = `${n} road${n===1?'':'s'} shown for this view -- rust/orange marks a listed major highway's wider buffer, slate the 25m public-road default, tan forest service roads (grey = retired); hover any road for details${cappedNote}${failedNote}. Pan/zoom then press the button again to update.`;
   }
 }
 document.getElementById('revealRoadBtn').addEventListener('click', revealAllRoads);
