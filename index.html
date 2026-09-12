@@ -5378,12 +5378,21 @@ function loadPdfJs(){
 }
 
 // Most municipal/regional-district sites don't send Access-Control-Allow-Origin, so a
-// direct cross-origin fetch from this local file is usually blocked by the browser before
-// it even reaches application code (the same reason the DataBC WFS calls need a JSONP
-// fallback). There's no JSONP option for arbitrary government PDF/HTML hosting, so the
-// fallback here is a public, keyless, read-only CORS proxy instead. That's a real
-// dependency on a third-party service staying up — if it's down, this degrades to the
-// plain search link, same as an unlisted jurisdiction.
+// direct cross-origin fetch is usually blocked by the browser before it even reaches
+// application code (the same reason the DataBC WFS calls need a JSONP fallback). There's
+// no JSONP option for arbitrary government PDF/HTML hosting, so as of v90 the fallback is
+// our own minimal serverless proxy (api/bylaw-fetch.js, deployed alongside this page on
+// Vercel) — locked to the exact hosts in BYLAW_SOURCES below, so it can't be used as an
+// open proxy for anything else. That only works once this page is actually served from
+// its real origin, not opened as a local file, so BYLAW_PROXY_ENDPOINT is skipped entirely
+// (falling straight through to the old public CORS proxy) when location.protocol isn't
+// http/https. The old public, keyless api.allorigins.win proxy stays wired in as the
+// last-resort fallback either way — for local-file testing, and as a safety net if our own
+// function is ever down — but as of v90 it's no longer this feature's *primary* CORS
+// workaround, which is the real fix: that was a genuine dependency on an uncontrolled
+// third-party service staying up, for every jurisdiction this ever looks up. See
+// docs/CHANGELOG.md's v90 section.
+const BYLAW_PROXY_ENDPOINT = "/api/bylaw-fetch";
 const CORS_PROXY = "https://api.allorigins.win/raw?url=";
 async function fetchBylawSource(url, timeoutMs=15000){
   const ctrl = new AbortController();
@@ -5394,8 +5403,18 @@ async function fetchBylawSource(url, timeoutMs=15000){
       res = await fetch(url, {signal: ctrl.signal, mode:"cors"});
       if(!res.ok) throw new Error("HTTP " + res.status);
     }catch(directErr){
-      res = await fetch(CORS_PROXY + encodeURIComponent(url), {signal: ctrl.signal});
-      if(!res.ok) throw new Error("proxy HTTP " + res.status);
+      if(location.protocol.startsWith("http")){
+        try{
+          res = await fetch(`${BYLAW_PROXY_ENDPOINT}?url=${encodeURIComponent(url)}`, {signal: ctrl.signal});
+          if(!res.ok) throw new Error("proxy HTTP " + res.status);
+        }catch(ownProxyErr){
+          res = await fetch(CORS_PROXY + encodeURIComponent(url), {signal: ctrl.signal});
+          if(!res.ok) throw new Error("fallback proxy HTTP " + res.status);
+        }
+      } else {
+        res = await fetch(CORS_PROXY + encodeURIComponent(url), {signal: ctrl.signal});
+        if(!res.ok) throw new Error("fallback proxy HTTP " + res.status);
+      }
     }
     const buf = await res.arrayBuffer();
     return {ok:true, buf};
