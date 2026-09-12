@@ -3055,6 +3055,19 @@ function cutblockPopup(entry){
 // opens that same real popup instead, panning to it first if it's off
 // screen. entry.mapLayer (set when the shape was drawn -- see
 // renderMapOverlays) is how it finds where "on the map" actually is.
+//
+// v91: v76's version reused openNearbyFeaturesPopupAt(latlng) -- the shared
+// click chooser -- to get "the identical popup a real map click would
+// produce," but that re-tests the point against *every* registered feature,
+// so a cutblock that happens to genuinely overlap something else right at
+// its centroid (another cutblock, a tenure, a road) could open the "N
+// records here" chooser instead of this specific entry Karim just clicked
+// from the list -- the opposite of what a list click should ever do, since
+// picking a row already resolved which record you mean. This now always
+// opens exactly this entry's own popup (cutblockPopup(entry), the same
+// content pushClickable() registered for its real on-map shape at draw
+// time -- see renderMapOverlays' cutblock block), skipping the re-test
+// entirely. Same real Leaflet popup either way, just never ambiguous.
 function openCutblockFromList(entry){
   if(entry && entry.mapLayer && entry.mapLayer.getBounds){
     let latlng = entry.mapLayer.getBounds().getCenter();
@@ -3070,13 +3083,8 @@ function openCutblockFromList(entry){
       }
     }
     if(!map.getBounds().contains(latlng)) map.panTo(latlng);
-    // Reuses the exact same shared click handler a real map click at this
-    // point would run (see openNearbyFeaturesPopupAt() further down) -- so
-    // if this cutblock genuinely overlaps another record of *any* type
-    // (another cutblock, a tenure, a road...) at that point, this shows the
-    // identical chooser popup a real map click would too, not just a
-    // cutblock-only mirror of it.
-    openNearbyFeaturesPopupAt(latlng);
+    if(entry.mapLayer.bringToFront) entry.mapLayer.bringToFront();
+    L.popup({maxWidth: 280, autoPan: false}).setLatLng(latlng).setContent(cutblockPopup(entry)).openOn(map);
     return;
   }
   // Fallback -- e.g. an entry flagged oversized is deliberately left off the
