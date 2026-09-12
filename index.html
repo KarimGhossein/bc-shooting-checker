@@ -1720,6 +1720,17 @@ if(typeof L === 'undefined' || window.__leafletLoadFailed){
 
 const map = L.map('map').setView([54.5, -125.5], 5);
 
+// Map Tab Sync extension bridge -- lets the browser extension snap this
+// map to another tab's exact position/zoom (e.g. onX Hunt), instead of
+// only approximating via replayed scroll/drag gestures. See the
+// extension's README for details. Safe to leave in even without the
+// extension installed -- it's inert until something calls it.
+window.__mapSyncTarget = {
+  setView(lat, lng, zoom) {
+    map.setView([lat, lng], zoom, { animate: true, duration: 0.25 });
+  }
+};
+
 // v73's syncLeafletLeftHeight() used to live here, keeping --leaflet-left-h
 // in sync with Leaflet's own top-left control stack so the (then left-edge)
 // toolbar tab could clear it. v76 moved that tab to the right edge, stacked
