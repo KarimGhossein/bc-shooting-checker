@@ -61,6 +61,7 @@ src/
   config/
     constants.js      buffer distances, feature caps, query-level filters (DONE, v92)
     layers.js         LAYERS (the 16 WFS layer definitions) (DONE, v92)
+    icons.js          MARKUP_ICONS -- the 17-icon curated Lucide set for markup pins (DONE, v93)
   data/
     wfs.js            queryLayer, wfsUrl, jsonpRequest, cqlFor, viewportBboxCql
     geocode.js         Nominatim

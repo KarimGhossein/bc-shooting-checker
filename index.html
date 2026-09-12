@@ -645,7 +645,14 @@
   .leaflet-draw-toolbar-top a{border-radius:9px !important;}
 
   .markup-pin{background:none;border:none;}
-  .markup-pin-dot{width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45);}
+  .markup-pin-dot{width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;}
+  /* v93: the optional Lucide glyph drawn over a marker's colour dot. White
+     stroke reads on every colour in MARKUP_COLORS (all mid-to-dark); sized
+     well under the 18px dot so the white 2.5px stroke border around the dot
+     itself stays the dominant shape at a glance, same as a plain dot did
+     before this feature existed. pointer-events:none so the icon never
+     steals the divIcon's own click/hover handling. */
+  .markup-pin-icon{width:11px;height:11px;pointer-events:none;}
 
   /* v75: moved off the map (it used to float bottom-right, its own small
      card) and into the tools drawer (moved from the left edge to the right
@@ -680,6 +687,19 @@
   .mf-colors{display:flex;gap:7px;flex-wrap:wrap;}
   .mf-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
   .mf-swatch.sel{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset;}
+  /* v93: icon picker, grouped by category under small uppercase labels
+     (same visual language as .mf-label) so 17 icons don't read as one
+     undifferentiated grid -- matches how the categories were chosen in the
+     first place (asked as a multi-select, not a flat list). */
+  .mf-icons{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;padding:2px;border:1px solid var(--border);border-radius:8px;background:var(--bg);}
+  .mf-icon-group-label{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin:6px 0 5px 4px;}
+  .mf-icon-group:first-child .mf-icon-group-label{margin-top:2px;}
+  .mf-icon-group-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px;}
+  .mf-icon-btn{width:30px;height:30px;flex:0 0 auto;border-radius:7px;border:2px solid transparent;background:#fff;cursor:pointer;padding:5px;color:#4a5261;display:flex;align-items:center;justify-content:center;}
+  .mf-icon-btn svg{width:100%;height:100%;}
+  .mf-icon-btn:hover{background:#eef1f5;}
+  .mf-icon-btn.sel{border-color:var(--accent);color:var(--accent);background:#fff;}
+  .mf-icon-btn.mf-icon-none{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.2px;}
   .mf-btnrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
   .small-btn.danger{color:var(--red);border-color:var(--red-line);background:var(--red-bg);}
   .small-btn.danger:hover{background:#fbe0dc;}
@@ -925,6 +945,10 @@
       <textarea id="markupNotesInput" class="mf-input" rows="3" placeholder="Optional notes..." maxlength="600"></textarea>
       <label class="mf-label">Color</label>
       <div class="mf-colors" id="markupColorRow"></div>
+      <div id="markupIconSection">
+        <label class="mf-label">Icon (optional)</label>
+        <div class="mf-icons" id="markupIconRow"></div>
+      </div>
       <div class="mf-btnrow">
         <button class="small-btn danger" id="markupDeleteBtn">🗑 Delete</button>
         <button class="ma-btn" id="markupSaveBtn" style="padding:8px 18px;">Save</button>
@@ -938,6 +962,7 @@
      for why), loaded in dependency order before the main inline script. -->
 <script src="src/config/constants.js"></script>
 <script src="src/config/layers.js"></script>
+<script src="src/config/icons.js"></script>
 <script>
 // ---------------- info modal ----------------
 // A single reusable popup used everywhere something used to be permanent
@@ -1989,16 +2014,27 @@ map.on('click', e => runLookup(e.latlng.lat, e.latlng.lng));
 const MARKUP_STORAGE_KEY = "bcShootingChecker_markup_v1";
 const MARKUP_COLORS = ["#3b6fe0","#e0393e","#e08e2b","#c9a227","#2f9e44","#0aa6a6","#7b3fa0","#3a414c"];
 const markupLayer = new L.FeatureGroup().addTo(map);
-let markupItems = []; // {id, kind:'marker'|'polyline'|'polygon', name, notes, color, layer}
+let markupItems = []; // {id, kind:'marker'|'polyline'|'polygon', name, notes, color, icon, layer}
 const markupSeq = {marker:0, polyline:0, polygon:0};
 let markupEditingId = null;
 let markupSelectedColor = MARKUP_COLORS[0];
+let markupSelectedIcon = null; // v93: null = plain dot, matching every pin before this feature existed
 
 function markupUid(){ return 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-function markupPinIcon(color){
+// v93: `icon`, when set, is one of MARKUP_ICONS_BY_ID's keys (src/config/icons.js).
+// `stroke` defaults to white for the icon-on-pin case (legible over any of
+// the 8 MARKUP_COLORS); the icon-picker buttons in the editor modal call
+// this with their own currentColor instead, since those render on a plain
+// background, not a coloured dot.
+function markupIconSvg(iconId, stroke){
+  const icon = iconId && MARKUP_ICONS_BY_ID[iconId];
+  if(!icon) return '';
+  return `<svg class="markup-pin-icon" viewBox="0 0 24 24" fill="none" stroke="${stroke || '#fff'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${icon.body}</svg>`;
+}
+function markupPinIcon(color, icon){
   return L.divIcon({
     className: 'markup-pin',
-    html: `<div class="markup-pin-dot" style="background:${color}"></div>`,
+    html: `<div class="markup-pin-dot" style="background:${color}">${markupIconSvg(icon)}</div>`,
     iconSize: [18,18], iconAnchor: [9,9], popupAnchor: [0,-10]
   });
 }
@@ -2009,7 +2045,7 @@ function markupDefaultName(kind){
 }
 function markupKindIcon(kind){ return kind === 'marker' ? '📍' : (kind === 'polyline' ? '➖' : '⬡'); }
 function styleMarkupLayer(item){
-  if(item.kind === 'marker') item.layer.setIcon(markupPinIcon(item.color));
+  if(item.kind === 'marker') item.layer.setIcon(markupPinIcon(item.color, item.icon));
   else item.layer.setStyle({color:item.color, weight: item.kind === 'polyline' ? 3.5 : 2.5, fillColor:item.color, fillOpacity: item.kind === 'polygon' ? 0.18 : 1});
 }
 function markupPopupHtml(item){
@@ -2028,6 +2064,11 @@ function addMarkupItem(layer, kind, opts){
     name: opts.name != null ? opts.name : markupDefaultName(kind),
     notes: opts.notes || "",
     color: opts.color || MARKUP_COLORS[0],
+    // v93: icon-only-for-markers by construction -- lines/areas never pass
+    // opts.icon and styleMarkupLayer() only ever reads it on the marker
+    // branch, so this stays undefined/unused rather than needing its own
+    // kind-guard here.
+    icon: opts.icon && MARKUP_ICONS_BY_ID[opts.icon] ? opts.icon : null,
     layer
   };
   markupLayer.addLayer(layer);
@@ -2083,6 +2124,27 @@ document.getElementById('markupColorRow').addEventListener('click', e => {
   markupSelectedColor = btn.dataset.color;
   document.querySelectorAll('#markupColorRow .mf-swatch').forEach(b => b.classList.toggle('sel', b === btn));
 });
+// v93: icon picker -- a "None" button (plain dot, the only option before
+// this feature existed) followed by each category from MARKUP_ICONS as its
+// own labelled group. Built once from data rather than hand-written, so
+// adding an icon later is a one-line change to src/config/icons.js, not a
+// second place in the HTML to keep in sync.
+document.getElementById('markupIconRow').innerHTML =
+  `<div class="mf-icon-group"><div class="mf-icon-group-row">` +
+  `<button type="button" class="mf-icon-btn mf-icon-none" data-icon="" title="No icon">None</button>` +
+  `</div></div>` +
+  MARKUP_ICONS.map(cat => `<div class="mf-icon-group">
+      <div class="mf-icon-group-label">${esc(cat.label)}</div>
+      <div class="mf-icon-group-row">${cat.icons.map(icon =>
+        `<button type="button" class="mf-icon-btn" data-icon="${icon.id}" title="${esc(icon.label)}">${markupIconSvg(icon.id, 'currentColor')}</button>`
+      ).join('')}</div>
+    </div>`).join('');
+document.getElementById('markupIconRow').addEventListener('click', e => {
+  const btn = e.target.closest('.mf-icon-btn');
+  if(!btn) return;
+  markupSelectedIcon = btn.dataset.icon || null;
+  document.querySelectorAll('#markupIconRow .mf-icon-btn').forEach(b => b.classList.toggle('sel', b === btn));
+});
 function openMarkupEditor(id){
   const item = findMarkupItem(id);
   if(!item) return;
@@ -2093,6 +2155,12 @@ function openMarkupEditor(id){
   document.getElementById('markupNotesInput').value = item.notes || "";
   markupSelectedColor = item.color;
   document.querySelectorAll('#markupColorRow .mf-swatch').forEach(b => b.classList.toggle('sel', b.dataset.color === item.color));
+  // v93: icons only ever render on marker pins (styleMarkupLayer only reads
+  // item.icon on the marker branch) -- hide the whole picker for lines/areas
+  // rather than showing controls that would silently do nothing on Save.
+  markupSelectedIcon = item.icon || null;
+  document.getElementById('markupIconSection').style.display = item.kind === 'marker' ? '' : 'none';
+  document.querySelectorAll('#markupIconRow .mf-icon-btn').forEach(b => b.classList.toggle('sel', (b.dataset.icon || null) === markupSelectedIcon));
   document.getElementById('markupModalOverlay').classList.add('open');
   document.getElementById('markupNameInput').focus();
 }
@@ -2108,6 +2176,7 @@ document.getElementById('markupSaveBtn').addEventListener('click', () => {
   item.name = document.getElementById('markupNameInput').value.trim();
   item.notes = document.getElementById('markupNotesInput').value.trim();
   item.color = markupSelectedColor;
+  if(item.kind === 'marker') item.icon = markupSelectedIcon;
   styleMarkupLayer(item);
   item.layer.closePopup();
   closeMarkupEditor();
@@ -2174,7 +2243,12 @@ if(typeof L.Control !== 'undefined' && typeof L.Control.Draw !== 'undefined' && 
 // ---- persistence: localStorage auto-save + export/import file ----
 function markupItemToFeature(item){
   const geo = item.layer.toGeoJSON();
-  return {type:"Feature", geometry: geo.geometry, properties:{id:item.id, kind:item.kind, name:item.name, notes:item.notes, color:item.color}};
+  // v93: `icon` is additive -- always written (as null when unset) so a
+  // file exported from this version round-trips exactly, but
+  // loadMarkupFromFeatureCollection() below treats a missing `icon` key the
+  // same as a null one, so files exported by every pre-v93 version of this
+  // app still import cleanly as plain, icon-less pins.
+  return {type:"Feature", geometry: geo.geometry, properties:{id:item.id, kind:item.kind, name:item.name, notes:item.notes, color:item.color, icon:item.icon || null}};
 }
 function saveMarkupToStorage(){
   try{
@@ -2200,7 +2274,7 @@ function loadMarkupFromFeatureCollection(fc, opts){
     const kind = p.kind || (f.geometry.type === "Point" ? "marker" : f.geometry.type === "LineString" ? "polyline" : "polygon");
     addMarkupItem(layer, kind, {
       id: opts.regenerateIds ? null : p.id,
-      name: p.name, notes: p.notes, color: p.color
+      name: p.name, notes: p.notes, color: p.color, icon: p.icon
     });
     added++;
   });
