@@ -163,10 +163,31 @@
   .tb-search input:focus{outline:none;}
   .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
   .tb-search #searchGoBtn:hover{background:#2f5fc9;}
-  #searchStatus{position:absolute;top:calc(100% + 6px);left:0;right:0;font-size:11px;color:#c3cde6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
+  /* v88: #searchStatus used to carry its own position:absolute (top:calc(100%
+     + 6px)) directly; now that the Potential Spots progress bar sits right
+     below it in the same column, .tb-status-wrap owns that absolute
+     placement instead and #searchStatus/.header-progress just stack inside
+     it via flex -- see the HTML above the header search box. */
+  .tb-status-wrap{position:absolute;top:calc(100% + 6px);left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  #searchStatus{font-size:11px;color:#c3cde6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;max-width:100%;}
   .tb-search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);max-height:280px;overflow-y:auto;padding:6px;z-index:10;}
   .tb-search-results .place-search-result{margin-bottom:4px;}
   .tb-search-results .place-search-result:last-child{margin-bottom:0;}
+  /* v88: the Potential Spots progress bar, moved here from the Tools
+     drawer's Mapping Functions group so it's visible for every run
+     (including the automatic 2km sweep that fires on every location pick)
+     without needing that drawer open -- see runPotentialSpotsSearch()'s own
+     v87 comment on why it's no longer force-opened. Same ids as before
+     (spotsProgress/spotsProgressFill/spotsProgressPct/spotsProgressLabel);
+     only the surrounding classes/styling changed, for the dark header
+     background instead of the drawer's light card background. */
+  .header-progress{display:flex;flex-direction:column;gap:3px;width:100%;max-width:280px;}
+  .header-progress[hidden]{display:none;} /* v75's #spotsProgress note applies here too -- see .td-status's old comment: an author display rule always beats the UA [hidden]{display:none} at equal specificity */
+  .hp-track{height:5px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;}
+  .hp-fill{height:100%;width:0%;background:#fff;border-radius:4px;transition:width .15s ease;}
+  .hp-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#c3cde6;}
+  .hp-pct{font-weight:700;white-space:nowrap;}
+  .hp-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;}
 
   /* Bottom drawer -- the old #panel's "Location report" (verdict + cards),
      now a collapsible, resizable, slightly-transparent sheet along the
@@ -335,27 +356,6 @@
      piece of information" treatment every status/result area in the rest of
      the app already gets (report cards, the checklist). */
   .td-status{background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:9px;padding:9px 10px;}
-  /* progress bar + percent readout for the potential-spots multi-query sweep
-     (radius or view-based) -- sits directly above the status note so
-     there's visible feedback for the ~10 parallel DataBC/Overpass queries in
-     flight, instead of only a "Checking..." note with no sense of progress.
-     v75: #spotsProgress carries both the `hidden` attribute *and* this class
-     -- .spots-progress{display:flex} is an author rule, and author rules
-     always beat the user-agent stylesheet's [hidden]{display:none} at equal
-     specificity regardless of origin order, so without the [hidden] override
-     directly below, "hidden" on this element was cosmetic only: the bar (and
-     the stale 0%/empty state inside it) stayed visibly rendered at all
-     times, not just while a search was actually running. */
-  .spots-progress{display:flex;flex-direction:column;gap:4px;margin-bottom:8px;}
-  .spots-progress[hidden]{display:none;}
-  .sp-track{height:6px;border-radius:4px;background:rgba(15,23,42,.1);overflow:hidden;}
-  .sp-fill{height:100%;width:0%;background:var(--navy);border-radius:4px;transition:width .15s ease;}
-  .sp-pct{font-size:10.5px;font-weight:700;color:var(--muted);text-align:right;}
-  /* short, plain-language readout of what's still in flight -- see
-     trackSpotsProgress()'s `labels` argument -- updated every time one of
-     the ~10 parallel queries settles so it actually tracks reality instead
-     of a single static "Checking..." sentence for the whole run. */
-  .sp-label{font-size:10.5px;color:var(--muted);text-align:right;min-height:13px;}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(12,16,26,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;}
   .modal-overlay.open{display:flex;}
@@ -698,7 +698,8 @@
     .tb-left{justify-content:center;order:1;}
     .tb-left .tb-title{white-space:normal;justify-content:center;}
     .tb-search-wrap{position:static;transform:none;width:100%;max-width:none;padding:2px 0 0;order:2;}
-    #searchStatus,.tb-search-results{position:static;margin-top:6px;}
+    .tb-status-wrap,.tb-search-results{position:static;margin-top:6px;}
+    .header-progress{max-width:none;}
     .tb-right{justify-content:center;margin-left:0;order:3;}
   }
   @media (max-width:600px){
@@ -762,7 +763,24 @@
       <button class="info-btn on-dark" id="coordInfoBtn" title="How to search" aria-label="How to search">i</button>
     </div>
     <div class="tb-search-results" id="searchResults" hidden></div>
-    <div id="searchStatus">No location selected yet.</div>
+    <!-- v88: the Potential Spots progress bar moved here from the Tools
+         drawer (Mapping Functions group) -- Karim asked for it in the
+         header so it's visible for every run (the automatic 2km sweep
+         included) without needing the Tools drawer open at all. Same ids
+         (spotsProgress/spotsProgressFill/spotsProgressPct/spotsProgressLabel)
+         as before -- startSpotsProgress()/trackSpotsProgress()/
+         endSpotsProgress() further down look these up by id and don't care
+         where in the DOM they live, so this is a pure markup/CSS move, no
+         JS changes. Wrapped with #searchStatus in .tb-status-wrap so the
+         two stack in one column under the search bar instead of each
+         needing its own absolute-position guess. -->
+    <div class="tb-status-wrap">
+      <div id="searchStatus">No location selected yet.</div>
+      <div class="header-progress" id="spotsProgress" hidden>
+        <div class="hp-track"><div class="hp-fill" id="spotsProgressFill"></div></div>
+        <div class="hp-row"><span class="hp-pct" id="spotsProgressPct">Loading… 0%</span><span class="hp-label" id="spotsProgressLabel"></span></div>
+      </div>
+    </div>
   </div>
   <div class="tb-right">
     <button type="button" class="icon-btn" id="dragPinBtn" draggable="true" title="Drag this onto the map to drop a pin exactly where you want it" aria-label="Drag this onto the map to drop a pin exactly where you want it">📌</button>
@@ -859,12 +877,11 @@
             <button type="button" class="clear-menu-item" data-key="road">🛣️ Road Access</button>
           </div>
         </div>
+        <!-- v88: the progress bar that used to live here moved to the
+             header (see .tb-status-wrap up top) -- this status note stays,
+             it's shared by every Mapping Functions button, not just
+             Shooting Spots. -->
         <div class="td-status">
-          <div class="spots-progress" id="spotsProgress" hidden>
-            <div class="sp-track"><div class="sp-fill" id="spotsProgressFill"></div></div>
-            <div class="sp-pct" id="spotsProgressPct">Loading… 0%</div>
-            <div class="sp-label" id="spotsProgressLabel"></div>
-          </div>
           <div class="ma-note" id="mapActionsNote"></div>
         </div>
       </div>
@@ -1952,6 +1969,52 @@ function resetClickableSource(source){
 // its own full detail, the same technique currentCutOpenings above already
 // uses for the report card's own list.
 let currentNearbyMatches = [];
+
+// v89: Karim asked that hovering a row in the multi-record chooser popup
+// (openNearbyFeaturesPopupAt() further down) highlight that same feature on
+// the map -- the same idea as the report's own cutblock-list hover-highlight
+// (see the #report mouseover/mouseout delegation above), extended to every
+// layer type the chooser can list. That report version works by restyling
+// the real drawn layer in place (cutblockHighlightStyle()) and reverting to
+// cutblockStyle() on mouseout -- straightforward there because every
+// cutblock shares one style function. The chooser has no such single
+// "normal style" to revert to: it spans parcels, tenures, roads, cutblocks,
+// recreation features, Potential Spots squares, and more, each drawn with
+// its own quite different style (solid fills, near-invisible 0.03-opacity
+// fills, dashed outlines...), so restyling those in place would need every
+// one of pushClickable()'s ~20 call sites to also hand over its live
+// Leaflet layer just so this could remember and restore its exact original
+// style. Simpler and layer-type-agnostic: draw a fresh, consistent
+// highlight outline from the match's own geometry (already stored on it by
+// pushClickable()) into this dedicated layer, then just clear the whole
+// layer again on mouseout -- looks the same regardless of the underlying
+// feature's own style, and there's nothing to get wrong reverting it.
+const chooserHighlightLayer = L.layerGroup().addTo(map);
+const CHOOSER_HIGHLIGHT_STYLE = {color:'#ffdd57', weight:5, opacity:0.95, fillColor:'#ffdd57', fillOpacity:0.25, interactive:false};
+function highlightNearbyMatch(i){
+  const m = currentNearbyMatches[i];
+  chooserHighlightLayer.clearLayers();
+  if(!m || !m.geometry) return;
+  const layer = L.geoJSON(m.geometry, {
+    style: CHOOSER_HIGHLIGHT_STYLE,
+    // Point geometries (recreation sites, Potential Spots gap centers, etc.)
+    // -- L.geoJSON's own default marker icon would look nothing like "this
+    // shape, highlighted," so this draws the same ring style circleMarker
+    // the rest of the app already uses for point features instead.
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {radius:12, color:CHOOSER_HIGHLIGHT_STYLE.color, weight:4, fillColor:CHOOSER_HIGHLIGHT_STYLE.color, fillOpacity:0.25, interactive:false}),
+  }).addTo(chooserHighlightLayer);
+  if(layer.bringToFront) layer.bringToFront();
+}
+function clearNearbyMatchHighlight(){
+  chooserHighlightLayer.clearLayers();
+}
+// Safety net: if the chooser popup closes some other way than the pointer
+// actually leaving the hovered row (e.g. clicking elsewhere on the map,
+// which Leaflet closes the open popup for), there may be no mouseout event
+// on the row to clean up after itself. Harmless no-op if nothing's
+// highlighted -- fires on every popup on the map closing, not just the
+// chooser's, since clearing an already-empty layer costs nothing.
+map.on('popupclose', clearNearbyMatchHighlight);
 
 map.on('click', e => runLookup(e.latlng.lat, e.latlng.lng));
 
@@ -3794,7 +3857,9 @@ function openNearbyFeaturesPopupAt(latlng){
     html = matches[0].html;
   } else {
     currentNearbyMatches = matches;
-    const rows = matches.map((m, i) => `<div class="field clickable" onclick="showNearbyFeatureDetail(${i})"><span class="chev">details ›</span>${m.icon} ${m.rowLabel}</div>`).join('');
+    // v89: onmouseover/onmouseout highlight this row's own shape on the map
+    // -- see highlightNearbyMatch()/clearNearbyMatchHighlight() up top.
+    const rows = matches.map((m, i) => `<div class="field clickable" onclick="showNearbyFeatureDetail(${i})" onmouseover="highlightNearbyMatch(${i})" onmouseout="clearNearbyMatchHighlight()"><span class="chev">details ›</span>${m.icon} ${m.rowLabel}</div>`).join('');
     html = `<div style="font-size:12.5px;line-height:1.7;min-width:220px">
       <b>${matches.length} records here</b><br>
       <span style="color:#6b7380">These overlap or sit right at this point on the map -- pick one below for its full details.</span>
@@ -4707,9 +4772,10 @@ const INFRA_MIN_ZOOM = 12;
 // to someone watching. Purely a progress indicator; it never changes what a
 // query resolves to, only when the UI finds out.
 // v75: two changes. (1) startSpotsProgress()/endSpotsProgress() only ever
-// toggled the `hidden` attribute -- see .spots-progress[hidden] in the CSS
-// for why that alone didn't actually hide anything, which is why the bar
-// used to sit on screen outside of a real search too. (2) trackSpotsProgress()
+// toggled the `hidden` attribute -- see .header-progress[hidden] in the CSS
+// (v88: moved here from .spots-progress in the Tools drawer) for why that
+// alone didn't actually hide anything, which is why the bar used to sit on
+// screen outside of a real search too. (2) trackSpotsProgress()
 // now takes a `labels` array (one plain-language name per promise, in the
 // same order -- see SPOTS_QUERY_LABELS below) and keeps #spotsProgressLabel
 // updated with whichever of those is still in flight, so "what's currently
