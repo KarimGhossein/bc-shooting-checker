@@ -400,19 +400,6 @@
      size beside it. */
   .ma-row{display:flex;align-items:center;gap:6px;}
   .ma-row .ma-btn{flex:1 1 auto;min-width:0;}
-  /* v86: the Clear button's dropdown -- one clear action per category,
-     replacing the old separate "Clear Potential Spots"/"Clear All" buttons.
-     Anchored off #clearMenuRow (position:relative), same floating-panel
-     look as .tb-search-results above (border/radius/shadow), just narrower
-     and row-height-sized for menu items instead of search results. v87:
-     now one item per report category (11, up from 4) -- max-height +
-     scroll, same pattern .place-search-results already uses, so the list
-     stays reachable without pushing the rest of the drawer down. */
-  #clearMenuRow{position:relative;}
-  .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:6px;z-index:10;max-height:280px;overflow-y:auto;}
-  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);}
-  .clear-menu-item:last-child{margin-bottom:0;}
-  .clear-menu-item:hover{background:var(--bg);}
 
   /* bottom offset accounts for the fixed bottom report drawer's collapsed
      handle (v41) so this doesn't sit underneath it. v76: the left edge is
@@ -874,29 +861,6 @@
           <button class="ma-btn" id="revealRoadBtn">🛣️ Reveal Road</button>
           <button type="button" class="info-btn" id="roadInfoBtn" title="What this button does" aria-label="What this button does">i</button>
         </div>
-        <div class="ma-row" id="clearMenuRow">
-          <button type="button" class="ma-btn" id="clearMenuBtn" aria-haspopup="true" aria-expanded="false">🧹 Clear ▾</button>
-          <button type="button" class="info-btn" id="clearInfoBtn" title="What this button does" aria-label="What this button does">i</button>
-          <!-- v87: one item per single-click report category (see renderReport()'s
-               pushCard() keys) -- Karim clarified this should mirror the report's
-               own sections, not the Mapping Functions buttons above. data-key
-               matches both a pushCard() key (report card id="card-<key>") and an
-               overlayCategoryLayers key (map shapes), so one delegated click
-               handler (see the JS below) can clear either or both from one id. -->
-          <div class="clear-menu" id="clearMenu" hidden>
-            <button type="button" class="clear-menu-item" data-key="parcel">🗺️ Parcel</button>
-            <button type="button" class="clear-menu-item" data-key="municipality">🏙️ Municipal Boundary</button>
-            <button type="button" class="clear-menu-item" data-key="bylaw">📜 Bylaw Lookup</button>
-            <button type="button" class="clear-menu-item" data-key="park">🌲 Park / Protected Area</button>
-            <button type="button" class="clear-menu-item" data-key="wma">🦌 Wildlife Management Area</button>
-            <button type="button" class="clear-menu-item" data-key="recreation">🏕️ Recreation Sites &amp; Trails</button>
-            <button type="button" class="clear-menu-item" data-key="mvpr">🚧 Motor Vehicle Closures</button>
-            <button type="button" class="clear-menu-item" data-key="cutblocks">🪵 Forestry Activity</button>
-            <button type="button" class="clear-menu-item" data-key="tenures">📜 Crown Land Tenures</button>
-            <button type="button" class="clear-menu-item" data-key="woodlot">🪓 Forest Tenure (Woodlot)</button>
-            <button type="button" class="clear-menu-item" data-key="road">🛣️ Road Access</button>
-          </div>
-        </div>
         <!-- v88: the progress bar that used to live here moved to the
              header (see .tb-status-wrap up top) -- this status note stays,
              it's shared by every Mapping Functions button, not just
@@ -1171,53 +1135,6 @@ document.getElementById('spotsInfoBtn').addEventListener('click', () => openInfo
 // Shooting Spots -- same colour-by-buffer-distance, same hover tooltip.
 const ROAD_VIEW_BLURB_HTML = `<div class="mrow">Queries two BC road networks directly for everything inside whatever's currently in view, and draws them on the map: the Digital Road Atlas (BC's general public road network -- rust/orange for a listed major highway's wider Wildlife Act buffer, slate for the 25m default), plus FTEN Road Section Lines (forest service and resource roads, including branches -- tan, or grey if retired). Hover any road for its class, status, and (for public roads) exact buffer distance.</div><div class="mrow" style="margin-top:8px">Only looks at the area on screen right now — it doesn't run automatically as you pan or zoom, so press it again after moving to update.</div><div class="mrow" style="margin-top:8px">The public-road half is the same layer Shooting Spots already draws as part of its own buffer check -- this button just lets you see the full road picture, public and forestry, without running the full Crown-land/park/municipality check too.</div>`;
 document.getElementById('roadInfoBtn').addEventListener('click', () => openInfoModal('🛣️ Reveal Road', ROAD_VIEW_BLURB_HTML));
-
-// v86: "Clear" -- replaces the old separate "Clear Potential Spots" shortcut
-// and "Clear All" button with a single dropdown offering individual clear
-// actions instead of one all-or-nothing button. v87: Karim clarified the
-// dropdown should list the single-click *report*'s own categories (Parcel,
-// Municipal Boundary, Bylaw Lookup, Park, WMA, Recreation, Motor Vehicle
-// Closures, Forestry, Crown Land Tenures, Woodlot, Road Access -- the same
-// 11 sections renderReport() builds, see pushCard() further down) rather
-// than the three Mapping Functions buttons above -- each item removes that
-// one report card, plus its own shapes on the map, leaving the pin, the
-// other ten categories, and View Parcels/Shooting Spots/Reveal Road (each
-// already replaces its own old contents the next time its button is
-// pressed) untouched. Deliberately does not touch the separate onX-style
-// markup layer/store at all (see the "custom map markup" section below) --
-// Karim was specific that his own drawn pins/lines/areas are not
-// "temporary" and shouldn't be affected by any of these.
-const CLEAR_BLURB_HTML = `<div class="mrow">Opens a list of one clear action per section of the location report below: Parcel, Municipal Boundary, Bylaw Lookup, Park/Protected Area, Wildlife Management Area, Recreation Sites &amp; Trails, Motor Vehicle Closures, Forestry Activity, Crown Land Tenures, Forest Tenure (Woodlot), and Road Access. Pick one to remove just that section's shapes from the map and its card from the report -- the pin and every other section are left exactly as they are.</div><div class="mrow" style="margin-top:8px">Doesn't cover View Parcels, Shooting Spots, or Reveal Road -- each of those already replaces its own map shapes the next time its own button is pressed. Your own drawn markup (pins/lines/areas from the draw toolbar, under "My markup") is a completely separate thing and is never touched by any of this.</div>`;
-document.getElementById('clearInfoBtn').addEventListener('click', () => openInfoModal('🧹 Clear', CLEAR_BLURB_HTML));
-
-// Dropdown open/close: toggle on the trigger button, close on an outside
-// click or after any menu item runs -- same interaction shape as every
-// other icon-triggered popover on this page.
-const clearMenuEl = document.getElementById('clearMenu');
-const clearMenuBtnEl = document.getElementById('clearMenuBtn');
-function closeClearMenu(){
-  clearMenuEl.hidden = true;
-  clearMenuBtnEl.setAttribute('aria-expanded', 'false');
-}
-clearMenuBtnEl.addEventListener('click', () => {
-  const willOpen = clearMenuEl.hidden;
-  clearMenuEl.hidden = !willOpen;
-  clearMenuBtnEl.setAttribute('aria-expanded', String(willOpen));
-});
-document.addEventListener('click', e => {
-  if(!clearMenuEl.hidden && !e.target.closest('#clearMenuRow')) closeClearMenu();
-});
-// v87: one delegated handler for all 11 report-category items instead of a
-// separate addEventListener per id -- each button's data-key is both a
-// pushCard() key (report card id="card-<key>") and an overlayCategoryLayers
-// key (its map shapes), so clearReportCategory() below can act on either
-// from the one attribute.
-clearMenuEl.addEventListener('click', e => {
-  const btn = e.target.closest('.clear-menu-item');
-  if(!btn) return;
-  clearReportCategory(btn.dataset.key, btn.textContent.trim());
-  closeClearMenu();
-});
 
 // ---------------- collapsible legend ----------------
 // The 16-row map key starts collapsed so it doesn't sit permanently over the
@@ -5295,33 +5212,6 @@ function boundsAroundPoint(lat, lng, radiusM){
 function radiusCql(geomField, lat, lng, radiusM, extraFilter){
   const spatial = `DWITHIN(${geomField}, ${pt(lat,lng)}, ${radiusM}, meters)`;
   return extraFilter ? `${spatial} AND ${extraFilter}` : spatial;
-}
-
-function setMapActionsNote(msg){
-  const noteEl = document.getElementById('mapActionsNote');
-  if(noteEl) noteEl.textContent = msg;
-}
-
-// v87: one function clears any single report category -- its map shapes
-// (overlayCategoryLayers[key], see renderMapOverlays()) and its own
-// currentClickableFeatures entries (tagged 'overlay:<key>', same place),
-// plus removes that category's card from the report (cardHTML() always
-// gives a card id="card-<key>" -- see renderReport()). key is also just
-// the button's own text for the confirmation note, emoji included. Replaces
-// the four category-specific functions v86 had (clearViewParcels/
-// clearRevealRoad/clearSelectedLocation, plus the old clearPotentialSpots()
-// shortcut) now that Karim clarified the dropdown should mirror the
-// report's own sections instead -- see the v87 build notes section. Never
-// touches drawnItems/markupItems/localStorage (see the "custom map markup"
-// section below) -- Karim's own drawn pins/lines/areas are a completely
-// separate, deliberately-saved thing and are never in scope for any Clear
-// action; nor does it touch the pin itself or any other category.
-function clearReportCategory(key, label){
-  if(overlayCategoryLayers[key]) overlayCategoryLayers[key].clearLayers();
-  currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== 'overlay:' + key);
-  const cardEl = document.getElementById('card-' + key);
-  if(cardEl) cardEl.remove();
-  setMapActionsNote(`${label || key} cleared from the map and report.`);
 }
 
 function fmtDate(d){ return d ? d.substring(0,10) : "—"; }
