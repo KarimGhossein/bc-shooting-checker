@@ -134,3 +134,47 @@ npm-install problem either — Playwright is available in this sandbox
 without an npm install, and `npm test` has been run for real (16/16
 passing, as of v92) against this exact repository state, file://-loaded,
 same as always.
+
+## v94: the blocker above turned out to already be live in production
+
+The paragraph above assumed the untested `npm install`/Vite toolchain was
+inert until someone deliberately ran it. It wasn't: Vercel auto-detects a
+project as Vite the moment it sees `vite.config.mjs` + `vite` in
+`package.json`, and **runs `npm run build` on every deploy, serving only
+its `dist/` output** — no one had to opt into that, and nothing in this
+plan or `docs/CHANGELOG.md` said it was happening. Vite's HTML processing
+only bundles/copies assets it can see in the `type="module"` import graph
+or `public/`; a plain classic `<script src="src/config/whatever.js">` (the
+whole point of this plan's "why classic scripts, not ES modules" section)
+is invisible to that graph, so Vite left the `<script>` tag untouched in
+its output `index.html` **but never copied the file it points at** — every
+`src/config/*.js` file 404'd in production from the moment v92 shipped.
+
+`SEARCH_RADIUS_M`/`LAYERS`/etc. are only read from inside function bodies
+that run on user interaction, so v92 alone 404'd silently — nothing throws
+until a query actually runs, and the report checked out fine in this
+session's own file://-based tests since those load the real files off
+disk, never through a Vite build. v93 is what made it loud: `MARKUP_ICONS`
+is read at the *top level* of the main script (populating the icon picker
+immediately at page load), so the same `ReferenceError` that would have
+eventually hit any real location lookup instead fired immediately and
+killed every remaining top-level statement in that one `<script>` block —
+which is why Karim saw My Markup **and** the header progress bar vanish
+together: both are wired later in the file than that crash point. The
+actual blast radius was larger than either symptom alone: any real
+location lookup against `LAYERS` had already been broken in production
+since v92, just not yet in an obvious way.
+
+**Fix**: `vercel.json` at the repo root, `{"framework": null, "buildCommand":
+null, "installCommand": null, "outputDirectory": "."}` — tells Vercel this
+is a plain static site, skip framework auto-detection and the build step
+entirely, and serve the repo root byte-for-byte, the same thing `file://`
+and a plain static file server already do. `/api/bylaw-fetch.js` (v90) is
+unaffected — Vercel Functions under `api/` are detected independently of
+the framework/build settings. If Karim's Vercel dashboard has an explicit
+per-setting *override* toggled on for Framework Preset/Build Command
+(Project Settings → Build & Development Settings), that would win over
+this file and needs clearing there too — `vercel.json` can't be verified
+from inside this sandbox (no dashboard access, and `npm install` is still
+blocked here per the paragraph above), so this needs a real deploy to
+confirm.
