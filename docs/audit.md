@@ -12,6 +12,8 @@ The app's functional core is strong: 16 live BC government data layers merged in
 
 Key measurements: 16 live data layers · 175 JS functions in one file · 0 git commits · 0 tests in CI · 19 total ARIA/alt/role attributes · 0 uses of the Geolocation API.
 
+*(Kept as the original v84 baseline. As of v99: 18 real commits, 24 automated Playwright tests — see the updated Phase 1 status below for what's actually done, in progress, or waiting on a decision only Karim can make.)*
+
 ## What's already working
 - Data coverage: parcels, municipal boundaries, parks, Crown tenures, woodlots, WMAs, merged RESULTS+FTEN cutblocks with active-buffer warnings, DRA roads + forest service roads with real Wildlife Act buffer classification, MVPR closures, RSTBC recreation data, live bylaw fetch-and-parse for 3 municipalities, personal map markup with GeoJSON export/import.
 - Interaction design: shared cross-layer click-chooser for overlapping map features, consistent red/amber/green/gray severity coding, progressive disclosure via info buttons/modals, 3 basemaps with Mapbox auto-fallback.
@@ -38,13 +40,13 @@ Key measurements: 16 live data layers · 175 JS functions in one file · 0 git c
 
 ## Roadmap (4 phases)
 
-### Phase 1 — Foundation
-- [P0] Move the project into git, with real commits going forward
-- [P0] Split into an organized source tree with a real build step (Vite/esbuild)
-- [P0] Stand up real hosting, a domain, and HTTPS
-- [P0] Add a minimal backend to proxy WFS/Nominatim/Overpass/bylaw calls (fixes the CORS-proxy dependency, hides the Mapbox key, unlocks caching/rate-limiting)
-- [P1] Restrict the Mapbox token to the domain (or move tiles behind the new backend)
-- [P1] Stand up CI: lint, build, and the promoted Playwright suite on every push
+### Phase 1 — Foundation (status as of v99)
+- [P0] **DONE** — Move the project into git, with real commits going forward. 18 commits since the v84 baseline import, one per shipped version from v92 on.
+- [P0] **IN PROGRESS** — Split into an organized source tree with a real build step (Vite/esbuild). 4 of 5 planned extractions under way per `docs/PLAN.md` (config/constants+layers, WFS query layer, map click-chooser, first of three render.js passes) — `src/` holds 5 files, ~615 lines out of the original single script. Two more render.js passes + the full `ui/` split remain. The Vite build itself has never been run for real (this sandbox's network blocks the npm registry) — needs `npm install && npm run build` verified on a machine with real network access.
+- [P0] **NEEDS YOUR INPUT** — Stand up real hosting, a domain, and HTTPS. Live on Vercel with HTTPS since v90/v94, at the default `bc-shooting-checker.vercel.app` subdomain. No custom domain configured — your call whether that's fine for now.
+- [P0] **IN PROGRESS** — Add a minimal backend to proxy WFS/Nominatim/Overpass/bylaw calls (fixes the CORS-proxy dependency, hides the Mapbox key, unlocks caching/rate-limiting). Bylaw lookups already proxy through `api/bylaw-fetch.js` (v90). WFS/Nominatim/Overpass still call directly from the browser — the biggest remaining P0 gap.
+- [P1] **NEEDS YOUR INPUT (moot for now)** — Restrict the Mapbox token to the domain (or move tiles behind the new backend). `MAPBOX_TOKEN` is still the unfilled placeholder string — nothing to restrict until you paste a real one in.
+- [P1] **IN PROGRESS** — Stand up CI: lint, build, and the promoted Playwright suite on every push. `.github/workflows/ci.yml` exists and runs install/test/build on every push/PR to `main`. No lint step yet, and the workflow has never actually executed (only runs after a real GitHub push) — worth checking the Actions tab after your next push.
 
 ### Phase 2 — Public web launch readiness
 - [P0] Publish a Privacy Policy and Terms of Use
