@@ -63,7 +63,7 @@ src/
     layers.js         LAYERS (the 16 WFS layer definitions) (DONE, v92)
     icons.js          MARKUP_ICONS -- the 17-icon curated Lucide set for markup pins (DONE, v93)
   data/
-    wfs.js            queryLayer, wfsUrl, jsonpRequest, cqlFor, viewportBboxCql
+    wfs.js            queryLayer, wfsUrl, jsonpRequest, cqlFor, viewportBboxCql (DONE, v97)
     geocode.js         Nominatim
     overpass.js         OSM building queries
     open511.js          DriveBC
@@ -103,7 +103,7 @@ Roughly least-to-most risky, since later extractions depend on earlier
 ones already being defined by the time they run:
 
 1. ~~`config/constants.js` + `config/layers.js` — pure data, no behaviour, zero risk.~~ **Done, v92.**
-2. `data/wfs.js` — the query layer every feature depends on; get this right early.
+2. ~~`data/wfs.js` — the query layer every feature depends on; get this right early.~~ **Done, v97** (`queryOpen511`/`OPEN511_BASE` and `radiusCql` deliberately left inline — see the file's own scope note; a future `data/open511.js` and folding `radiusCql` in are separate, later passes).
 3. `map/chooser.js` — small, self-contained, already has the best test coverage (`verify_v79`, `verify_v83`).
 4. `map/render.js` — the biggest slice; do this one in a few passes (report-click rendering, then Shooting Spots, then View Parcels/Reveal Road), not all at once.
 5. `ui/*` — last, since it depends on everything above already being stable.
