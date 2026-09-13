@@ -71,7 +71,7 @@ src/
   map/
     basemaps.js        Satellite/Street/Topo + Mapbox fallback
     render.js            renderMapOverlays, renderNearbyRoads, renderActiveCutblockOutlines, etc.
-    chooser.js            currentClickableFeatures, pushClickable, resetClickableSource, openNearbyFeaturesPopupAt
+    chooser.js            currentClickableFeatures, pushClickable, resetClickableSource, openNearbyFeaturesPopupAt (DONE, v98 -- chooserHighlightLayer/highlightNearbyMatch(), added after this list was written, stayed inline; see the file's own scope note)
     markup.js              draw toolbar, GeoJSON export/import
   ui/
     drawers.js          bottom report drawer, checklist drawer, tools drawer
@@ -104,8 +104,8 @@ ones already being defined by the time they run:
 
 1. ~~`config/constants.js` + `config/layers.js` — pure data, no behaviour, zero risk.~~ **Done, v92.**
 2. ~~`data/wfs.js` — the query layer every feature depends on; get this right early.~~ **Done, v97** (`queryOpen511`/`OPEN511_BASE` and `radiusCql` deliberately left inline — see the file's own scope note; a future `data/open511.js` and folding `radiusCql` in are separate, later passes).
-3. `map/chooser.js` — small, self-contained, already has the best test coverage (`verify_v79`, `verify_v83`).
-4. `map/render.js` — the biggest slice; do this one in a few passes (report-click rendering, then Shooting Spots, then View Parcels/Reveal Road), not all at once.
+3. ~~`map/chooser.js` — small, self-contained, already has the best test coverage (`verify_v79`, `verify_v83`).~~ **Done, v98** (`chooserHighlightLayer`/`CHOOSER_HIGHLIGHT_STYLE`/`highlightNearbyMatch()`/`clearNearbyMatchHighlight()` deliberately left inline — their top-level layer creation needs `map`, which doesn't exist yet when this file's `<script src>` loads; see the file's own scope note).
+4. `map/render.js` — the biggest slice; do this one in a few passes (report-click rendering, then Shooting Spots, then View Parcels/Reveal Road), not all at once. **Take the v98 lesson into this one**: every `<script src>` file in this migration loads *before* the main inline script's `const map = L.map(...)` (line ~1603) runs, so any top-level statement that touches `map`, `L.layerGroup().addTo(map)`, `L.control(...)`, etc. *immediately* (not inside a function body) can't move into one of these files as-is — it'll throw on `map` not being defined yet. `render.js` almost certainly has more of these than `chooser.js` did (layer groups like `overlayLayer`/`parcelViewLayer`/`spotLayer`/`roadViewLayer` are created at the top level specifically so every render function can reach them). Each slice's own top comment should keep calling this out explicitly, the way `chooser.js`'s does, rather than silently leaving map-dependent globals inline without explanation.
 5. `ui/*` — last, since it depends on everything above already being stable.
 
 ## Rule for every step
