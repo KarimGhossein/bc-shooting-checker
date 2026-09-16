@@ -8,6 +8,9 @@
 //    clarified afterward that he meant a completely different thing (see
 //    #2 below and verify_v96_leafletdraw_clearall.js). This confirms it's
 //    back in full: same button, same 11 report-category menu items.
+//    (v101 update: the dropdown gained 3 more items -- parcelview/spots/
+//    roadview, one per Mapping Functions layer -- so the item count check
+//    below expects 14, not 11; see docs/CHANGELOG.md's v101 section.)
 //
 // 2) The #mapActionsNote status card under the Mapping Functions buttons
 //    used to render as a bordered, padded, visually empty box before any
@@ -43,7 +46,7 @@ const ROOT = path.resolve(__dirname, '..');
     // ---- Clear ▾ dropdown restored ----
     out.clearMenuBtnRestored = !!document.getElementById('clearMenuBtn');
     out.clearMenuRestored = !!document.getElementById('clearMenu');
-    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item').length === 11;
+    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item').length === 14;
 
     // ---- empty status-note card hidden until populated ----
     const statusCard = document.getElementById('mapActionsNote').closest('.td-status');

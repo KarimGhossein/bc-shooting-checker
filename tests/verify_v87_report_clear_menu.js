@@ -15,6 +15,15 @@
 //    he'd pressed anything in it, as showing up on its own.
 //
 // See docs/CHANGELOG.md's v87 section for the full root-cause writeup.
+//
+// v101 update: the dropdown gained three more items ahead of the 11 report
+// categories -- parcelview/spots/roadview, one per Mapping Functions layer
+// (View Parcels/Shooting Spots/Reveal Road), added so every layer shown on
+// the map has a Clear option, not just the single-click report's own
+// categories. The menuKeys assertion below is updated to expect those three
+// first; everything else this test checks (report-category behaviour,
+// runPotentialSpotsSearch() not force-opening the drawer) is unaffected and
+// unchanged.
 const { chromium } = require('playwright');
 const { launchOpts } = require('./launch');
 const fs = require('fs');
@@ -43,7 +52,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     out.oldMappingFnItemsGone = !document.getElementById('clearParcelsBtn') && !document.getElementById('clearSpotsMenuBtn') && !document.getElementById('clearRoadMenuBtn') && !document.getElementById('clearLocationBtn');
     const menuKeys = Array.from(document.querySelectorAll('#clearMenu .clear-menu-item')).map(b => b.dataset.key);
     out.menuKeys = menuKeys;
-    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcel','municipality','bylaw','park','wma','recreation','mvpr','cutblocks','tenures','woodlot','road']);
+    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcelview','spots','roadview','parcel','municipality','bylaw','park','wma','recreation','mvpr','cutblocks','tenures','woodlot','road']);
 
     // Build a real report + real map shapes for two categories (tenures,
     // park) via the same functions runLookup() calls, exactly like

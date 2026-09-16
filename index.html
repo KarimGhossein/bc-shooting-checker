@@ -893,8 +893,23 @@
                own sections, not the Mapping Functions buttons above. data-key
                matches both a pushCard() key (report card id="card-<key>") and an
                overlayCategoryLayers key (map shapes), so one delegated click
-               handler (see the JS below) can clear either or both from one id. -->
+               handler (see the JS below) can clear either or both from one id.
+               v101: three more items added above the report-section list --
+               View Parcels/Shooting Spots/Reveal Road each draw their own map
+               shapes (parcelViewLayer/spotLayer/roadViewLayer) entirely outside
+               the single-click report, and Karim asked that any layer shown on
+               the map have a Clear option -- previously the only way to reset
+               these three was pressing their own button again (re-querying and
+               redrawing), with no way to just remove the shapes. Their data-key
+               matches the chooser 'source' tag each already registers under
+               (resetClickableSource('parcelview'/'spots'/'roadview')), not an
+               overlayCategoryLayers key -- see clearMapToolLayer() below, which
+               the same delegated handler routes to instead of
+               clearReportCategory() for these three. -->
           <div class="clear-menu" id="clearMenu" hidden>
+            <button type="button" class="clear-menu-item" data-key="parcelview">🗺️ View Parcels</button>
+            <button type="button" class="clear-menu-item" data-key="spots">🎯 Shooting Spots</button>
+            <button type="button" class="clear-menu-item" data-key="roadview">🛣️ Reveal Road</button>
             <button type="button" class="clear-menu-item" data-key="parcel">🗺️ Parcel</button>
             <button type="button" class="clear-menu-item" data-key="municipality">🏙️ Municipal Boundary</button>
             <button type="button" class="clear-menu-item" data-key="bylaw">📜 Bylaw Lookup</button>
@@ -1172,7 +1187,7 @@ document.getElementById('parcelsInfoBtn').addEventListener('click', () => openIn
 // button (on demand, whatever's currently in view, like the original v19
 // button). Both share one core, runPotentialSpotsSearch() -- see the
 // "Potential Spots" section below.
-const SHOOTING_SPOTS_BLURB_HTML = `<div class="mrow"><b>Runs two ways:</b> automatically, within a 2&nbsp;km radius, every time you pick a location — click the map, drag the 📌 pin, drag the marker, search an address, or enter coordinates; or on demand, for whatever's currently in view, by pressing this button.</div><div class="mrow" style="margin-top:8px">Either way, a Crown/untitled parcel only counts as a potential spot if it also clears every automated condition the click checklist already checks — not inside a park, not inside a municipality, and clear of building/road/private-land buffers.</div><div class="mrow" style="margin-top:8px">Drawn in teal. If only part of a parcel is restricted, just that portion is shaded red with the reason shown on click — the rest stays teal. A parcel with no ParcelMap record at all shows as a purple "presumed Crown" gap. Crown tenures, forest licences, and nearby forestry activity stay as non-exclusionary ⚠ advisories in each spot's popup, same as the click report treats them.</div><div class="mrow" style="margin-top:8px">The 2&nbsp;km automatic sweep re-centers the map once results are in; the button-triggered view check doesn't move the map, since the whole point is checking what you already framed. Very wide views need a bit of zoom before the button will run (and a bit more before the building/road buffer check joins in) — the note below the buttons says so if that's why nothing happened. Use "Clear Potential Spots" to remove the shapes without picking a new location or pressing the button again.</div>`;
+const SHOOTING_SPOTS_BLURB_HTML = `<div class="mrow"><b>Runs two ways:</b> automatically, within a 2&nbsp;km radius, every time you pick a location — click the map, drag the 📌 pin, drag the marker, search an address, or enter coordinates; or on demand, for whatever's currently in view, by pressing this button.</div><div class="mrow" style="margin-top:8px">Either way, a Crown/untitled parcel only counts as a potential spot if it also clears every automated condition the click checklist already checks — not inside a park, not inside a municipality, and clear of building/road/private-land buffers.</div><div class="mrow" style="margin-top:8px">Drawn in teal. If only part of a parcel is restricted, just that portion is shaded red with the reason shown on click — the rest stays teal. A parcel with no ParcelMap record at all shows as a purple "presumed Crown" gap. Crown tenures, forest licences, and nearby forestry activity stay as non-exclusionary ⚠ advisories in each spot's popup, same as the click report treats them.</div><div class="mrow" style="margin-top:8px">The 2&nbsp;km automatic sweep re-centers the map once results are in; the button-triggered view check doesn't move the map, since the whole point is checking what you already framed. Very wide views need a bit of zoom before the button will run (and a bit more before the building/road buffer check joins in) — the note below the buttons says so if that's why nothing happened. Use "Clear ▾ → Shooting Spots" to remove the shapes without picking a new location or pressing the button again.</div>`;
 document.getElementById('spotsInfoBtn').addEventListener('click', () => openInfoModal('🎯 Shooting Spots', SHOOTING_SPOTS_BLURB_HTML));
 
 // v82: "Reveal Road" -- Karim asked for a way to highlight every road in
@@ -1194,14 +1209,23 @@ document.getElementById('roadInfoBtn').addEventListener('click', () => openInfoM
 // Closures, Forestry, Crown Land Tenures, Woodlot, Road Access -- the same
 // 11 sections renderReport() builds, see pushCard() further down) rather
 // than the three Mapping Functions buttons above -- each item removes that
-// one report card, plus its own shapes on the map, leaving the pin, the
-// other ten categories, and View Parcels/Shooting Spots/Reveal Road (each
-// already replaces its own old contents the next time its button is
-// pressed) untouched. Deliberately does not touch the separate onX-style
-// markup layer/store at all (see the "custom map markup" section below) --
-// Karim was specific that his own drawn pins/lines/areas are not
-// "temporary" and shouldn't be affected by any of these.
-const CLEAR_BLURB_HTML = `<div class="mrow">Opens a list of one clear action per section of the location report below: Parcel, Municipal Boundary, Bylaw Lookup, Park/Protected Area, Wildlife Management Area, Recreation Sites &amp; Trails, Motor Vehicle Closures, Forestry Activity, Crown Land Tenures, Forest Tenure (Woodlot), and Road Access. Pick one to remove just that section's shapes from the map and its card from the report -- the pin and every other section are left exactly as they are.</div><div class="mrow" style="margin-top:8px">Doesn't cover View Parcels, Shooting Spots, or Reveal Road -- each of those already replaces its own map shapes the next time its own button is pressed. Your own drawn markup (pins/lines/areas from the draw toolbar, under "My markup") is a completely separate thing and is never touched by any of this.</div>`;
+// one report card, plus its own shapes on the map, leaving the pin and
+// every other category untouched.
+//
+// v101: "Any layer that's shown on the map should have a Clear option" --
+// View Parcels/Shooting Spots/Reveal Road had been deliberately left out
+// since v87 (the reasoning above: each already replaces its own shapes the
+// next time its button is pressed), but that left no way to just *remove*
+// them without re-running a fresh, possibly slow query -- a real gap once
+// stated plainly as "every shown layer gets a Clear option." All three now
+// have their own items too (see clearMapToolLayer() near clearReportCategory()
+// further down), listed first since they're the ones most likely to be
+// pressed on their own. Still deliberately excluded, and still called out
+// explicitly below: the separate onX-style markup layer/store (see the
+// "custom map markup" section) -- Karim was specific that his own drawn
+// pins/lines/areas are not "temporary" and shouldn't be affected by any
+// Clear action, however this list is worded.
+const CLEAR_BLURB_HTML = `<div class="mrow">Opens a list of one clear action per layer currently shown on the map: View Parcels, Shooting Spots, and Reveal Road (removes just that layer's shapes, without re-running its query), plus one per section of the location report below: Parcel, Municipal Boundary, Bylaw Lookup, Park/Protected Area, Wildlife Management Area, Recreation Sites &amp; Trails, Motor Vehicle Closures, Forestry Activity, Crown Land Tenures, Forest Tenure (Woodlot), and Road Access (removes that section's shapes and its report card). The pin and every other item are left exactly as they are.</div><div class="mrow" style="margin-top:8px">Your own drawn markup (pins/lines/areas from the draw toolbar, under "My markup") is a completely separate, deliberately-saved thing and is never touched by any of this.</div>`;
 document.getElementById('clearInfoBtn').addEventListener('click', () => openInfoModal('🧹 Clear', CLEAR_BLURB_HTML));
 
 // Dropdown open/close: toggle on the trigger button, close on an outside
@@ -1229,7 +1253,13 @@ document.addEventListener('click', e => {
 clearMenuEl.addEventListener('click', e => {
   const btn = e.target.closest('.clear-menu-item');
   if(!btn) return;
-  clearReportCategory(btn.dataset.key, btn.textContent.trim());
+  // v101: the three Mapping Functions items (parcelview/spots/roadview)
+  // route to clearMapToolLayer() instead -- they're not a report category,
+  // so clearReportCategory()'s overlayCategoryLayers/report-card logic
+  // doesn't apply to them. See clearMapToolLayer()'s own comment further
+  // down for why they need a separate function.
+  if(MAP_TOOL_LAYERS[btn.dataset.key]) clearMapToolLayer(btn.dataset.key, btn.textContent.trim());
+  else clearReportCategory(btn.dataset.key, btn.textContent.trim());
   closeClearMenu();
 });
 
@@ -4134,6 +4164,30 @@ function clearReportCategory(key, label){
   const cardEl = document.getElementById('card-' + key);
   if(cardEl) cardEl.remove();
   setMapActionsNote(`${label || key} cleared from the map and report.`);
+}
+
+// v101: View Parcels/Shooting Spots/Reveal Road each draw their own layer
+// group entirely outside the single-click report (parcelViewLayer/spotLayer/
+// roadViewLayer, tagged 'parcelview'/'spots'/'roadview' in the shared
+// chooser -- plain tags, not the 'overlay:<key>' scheme renderMapOverlays()
+// uses), and none of them has a report card to remove -- so they can't just
+// reuse clearReportCategory() above. Karim's request was "any layer that's
+// shown on the map should have a Clear option," and until now these three
+// had none at all: the only way to reset one was pressing its own button
+// again, which re-queries and redraws rather than just removing what's
+// there. Each entry below is exactly the per-layer state that layer's own
+// reveal function resets at the start of a fresh run (see
+// drawParcelViewLayer()/runPotentialSpotsSearch() further down) -- clearing
+// it here does the same reset without also re-querying.
+const MAP_TOOL_LAYERS = {
+  parcelview: () => { parcelViewLayer.clearLayers(); parcelViewFeatures = []; },
+  spots: () => { spotLayer.clearLayers(); spotDetails = []; gapDetails = []; restrictedDetails = []; },
+  roadview: () => { roadViewLayer.clearLayers(); },
+};
+function clearMapToolLayer(key, label){
+  MAP_TOOL_LAYERS[key]();
+  currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== key);
+  setMapActionsNote(`${label || key} cleared from the map.`);
 }
 
 function fmtDate(d){ return d ? d.substring(0,10) : "—"; }
