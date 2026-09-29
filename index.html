@@ -248,6 +248,12 @@
   .caution-btn{display:inline-flex;align-items:center;gap:6px;background:var(--chrome-chip-bg);border:1px solid color-mix(in srgb, var(--red) 55%, transparent);border-radius:var(--radius-pill);padding:7px 12px;font-size:12px;font-weight:700;color:color-mix(in srgb, var(--red) 50%, var(--ink));cursor:pointer;font-family:inherit;white-space:nowrap;}
   .caution-btn:hover{background:var(--chrome-chip-hover);color:var(--ink);}
   .caution-btn .dot{font-size:13px;line-height:1;}
+  /* v106: neutral twin of .caution-btn (same pill shape/size/weight) for
+     the header's "About" button -- ink-toned border instead of red, since
+     it's informational rather than a warning. */
+  .chrome-btn{display:inline-flex;align-items:center;gap:6px;background:var(--chrome-chip-bg);border:1px solid var(--chrome-chip-border);border-radius:var(--radius-pill);padding:7px 12px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .chrome-btn:hover{background:var(--chrome-chip-hover);}
+  .chrome-btn svg{width:13px;height:13px;flex:none;}
 
   /* v63: icon-only button for the top bar (address/place search trigger) --
      same on-dark tinting as .info-btn.on-dark but sized as a real clickable
@@ -256,6 +262,9 @@
      deliberate given the header's history of wrapping at narrow widths. */
   .top-bar .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;border-radius:9px;background:var(--chrome-chip-bg);border:1px solid var(--chrome-chip-border);color:var(--ink);font-size:15px;cursor:pointer;flex:0 0 auto;transition:background .12s ease;}
   .top-bar .icon-btn:hover{background:var(--chrome-chip-hover);}
+  /* v106: the pin now sits between the pill-shaped search box and the round
+     "i" -- round it too so the three read as one family. */
+  .tb-search-row #dragPinBtn{border-radius:50%;}
 
   .place-search-results{margin-top:10px;max-height:280px;overflow-y:auto;}
   .place-search-result{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font:inherit;font-size:12.5px;line-height:1.4;color:var(--ink);}
@@ -335,7 +344,10 @@
      vertically centred with translate(-50%,-50%) below -- a status line that
      grew the wrap's real content height would otherwise nudge the search box
      itself up/down by half that amount every time the text changed. */
-  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:560px;padding:0 150px;box-sizing:border-box;}
+  /* v106: max-width 560 -> 602px, i.e. exactly +42px for the pin button
+     (34px + 8px gap) that moved into .tb-search-row, so the search box
+     itself keeps its previous 233px width instead of shrinking to 191px. */
+  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:602px;padding:0 150px;box-sizing:border-box;}
   /* v76: Karim asked for the "i" (how-to-search) icon to move out of the
      search box itself, to sit to the right of the Search button instead --
      .tb-search-row holds the actual search box and that icon side by side,
@@ -991,10 +1003,13 @@
   <div class="tb-left">
     <span class="tb-brand" role="img" aria-label="KAGE"><span>K</span><svg class="tb-lam" viewBox="0 0 80 70" aria-hidden="true"><polygon points="0,70 33,0 47,0 80,70 66,70 40,14.8 14,70"/><circle cx="40" cy="51" r="9"/></svg><span>G</span><span>E</span></span>
     <span class="tb-sep" aria-hidden="true"></span>
-    <div class="tb-title">Shooting Map <button class="info-btn on-dark" id="headerInfoBtn" title="About this tool" aria-label="About this tool">i</button></div>
+    <div class="tb-title">Shooting Map</div>
   </div>
   <div class="tb-search-wrap">
     <div class="tb-search-row">
+      <!-- v106: moved here from .tb-right -- sits directly left of the
+           search box, so both ways of choosing a location live together. -->
+      <button type="button" class="icon-btn" id="dragPinBtn" draggable="true" title="Drag this onto the map to drop a pin exactly where you want it" aria-label="Drag this onto the map to drop a pin exactly where you want it">📌</button>
       <div class="tb-search">
         <input id="searchInput" type="text" placeholder="Search address or place name, or enter coordinates (49.2827, -123.1207)">
         <button id="searchGoBtn">Search</button>
@@ -1022,7 +1037,10 @@
     </div>
   </div>
   <div class="tb-right">
-    <button type="button" class="icon-btn" id="dragPinBtn" draggable="true" title="Drag this onto the map to drop a pin exactly where you want it" aria-label="Drag this onto the map to drop a pin exactly where you want it">📌</button>
+    <!-- v106: "About" (was the "i" beside the header title) sits left of
+         Disclaimers as a labelled peer button; keeps the headerInfoBtn id
+         so its existing click wiring is unchanged. -->
+    <button type="button" class="chrome-btn" id="headerInfoBtn" title="About this tool"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="8" cy="8" r="6.25"/><path d="M8 7.2v4M8 4.9v.2"/></svg> About</button>
     <button class="caution-btn" id="disclaimerBtn"><span class="dot">⚠️</span> Disclaimers</button>
   </div>
 </div>

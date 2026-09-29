@@ -159,7 +159,7 @@ async function newPage(browser){
   })();
 
   const pass = dark.themeAttr === 'dark'
-    && dark.tbTitleText === 'Shooting Map i'
+    && dark.tbTitleText === 'Shooting Map' // v106: the title's "i" became the header's "About" button
     && dark.tbTitleHasTargetEmoji === false
     && dark.tbTitleIconSpanExists === false
     && dark.topBarBg === dark.menuBgResolved

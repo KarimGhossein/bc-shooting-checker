@@ -98,7 +98,7 @@ const readColours = () => {
     && markup.letters === 'KΛGE'
     && markup.polyPoints === POLY && markup.dotAttrs === '40,51,9' // header-size optical tuning; masters use 40,50,7
     && markup.brandBeforeTitle
-    && markup.tbTitleText === 'Shooting Map i'
+    && markup.tbTitleText === 'Shooting Map' // v106: the title's "i" became the header's "About" button
     && markup.oldCrosshairGone
     && markup.faviconIsSvgMark && touchFileExists
     && dark.theme === 'dark' && dark.polyFill === dark.ink && dark.dotFill === dark.accent
