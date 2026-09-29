@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BC Shooting Location Checker</title>
+<title>KAGE Shooting Map</title>
+<!-- v105: KAGE "Front Sight" mark as the favicon. Inline data URI (not a
+     file) so it also works in the standalone downloaded-HTML copy of this
+     app, which has no server to fetch a separate icon file from. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -9 88 88'%3E%3Crect x='-4' y='-9' width='88' height='88' rx='18' fill='%23101513'/%3E%3Cpolygon points='0,70 33,0 47,0 80,70 66,70 40,14.8 14,70' fill='%23F1F2EE'/%3E%3Ccircle cx='40' cy='50' r='7' fill='%23C9A56B'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <!-- v103: applies the saved (or default) theme to <html> as the very first
      thing that runs, before any stylesheet paints -- [data-theme="dark"] and
      [data-theme="light"] both exist as real CSS overrides (see :root below),
@@ -298,6 +303,20 @@
      app's own sans face, bold and tightly tracked instead. */
   .top-bar .tb-title{font-family:"Hanken Grotesk";font-weight:700;font-size:15.5px;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;white-space:nowrap;}
   .tb-left{display:flex;align-items:center;flex:0 0 auto;}
+  /* v105: KAGE "Front Sight" wordmark ahead of the "Shooting Map" title --
+     K, a crossbar-less Λ (flat-topped like a front sight post) with an
+     accent-coloured aiming dot, G, E. Same geometry as the KAGE site header
+     and the master logo files; the Λ is drawn at the font's own cap
+     height (Hanken Grotesk capHeight = .697em) so it sits flush with the
+     real letters. Header-size tuning vs the master files: weight 700 to
+     match .tb-title beside it, tighter .22em letter gap, and the aiming dot
+     enlarged from r=7 to r=9 (the usual small-size optical compensation --
+     at 15px the master dot is ~2px and disappears). Lives outside .tb-title on purpose, so the title element
+     (and v104's test of its exact text) is unchanged. */
+  .tb-brand{display:inline-flex;align-items:baseline;gap:.22em;font:700 15.5px/1 "Hanken Grotesk",system-ui,sans-serif;color:var(--ink);flex:0 0 auto;}
+  .tb-brand .tb-lam{width:.797em;height:.697em;display:block;flex:none;fill:currentColor;}
+  .tb-brand .tb-lam circle{fill:var(--accent);}
+  .tb-sep{width:1px;height:18px;background:var(--chrome-chip-border);margin:0 12px;flex:0 0 auto;}
   .tb-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
 
   /* One box that accepts either free text (address/place name) or a
@@ -970,6 +989,8 @@
 
 <div class="top-bar" id="topBar">
   <div class="tb-left">
+    <span class="tb-brand" role="img" aria-label="KAGE"><span>K</span><svg class="tb-lam" viewBox="0 0 80 70" aria-hidden="true"><polygon points="0,70 33,0 47,0 80,70 66,70 40,14.8 14,70"/><circle cx="40" cy="51" r="9"/></svg><span>G</span><span>E</span></span>
+    <span class="tb-sep" aria-hidden="true"></span>
     <div class="tb-title">Shooting Map <button class="info-btn on-dark" id="headerInfoBtn" title="About this tool" aria-label="About this tool">i</button></div>
   </div>
   <div class="tb-search-wrap">
