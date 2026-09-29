@@ -112,6 +112,25 @@
     --handle:rgba(0,0,0,.18);
     --handle-active:rgba(0,0,0,.32);
     --swatch-border:rgba(0,0,0,.15);
+    /* v103 (light-mode header follow-up): the header's own translucent
+       "chip" controls -- the small icon buttons, the search box, its
+       placeholder -- used to be hardcoded white-on-dark, back when the
+       header itself was always dark glass. Now that the header uses
+       --menu-bg like every other panel and flips with the theme, these
+       chips need to flip too: an ink-tinted transparent overlay, same
+       technique --seg-track/--handle above already use, so the dark-theme
+       values below reproduce the old hardcoded rgba(255,255,255,..)
+       numbers exactly (pixel-identical) and only light mode is new. */
+    --chrome-chip-bg:rgba(20,24,22,.06);
+    --chrome-chip-hover:rgba(20,24,22,.12);
+    --chrome-chip-border:rgba(20,24,22,.16);
+    /* the checklist cards inside the (translucent) side drawer get their own
+       slightly-different-toned background so they read as distinct cards
+       rather than just more of the drawer's own blur -- lighter-than-drawer
+       in light mode, darker-than-drawer in dark mode (see the dark override
+       below; Karim explicitly asked for dark mode's version to be darker,
+       not just a copy of the light one inverted). */
+    --checklist-card-bg:rgba(255,255,255,.6);
     --radius:18px;
     --radius-lg:26px;
     --radius-pill:999px;
@@ -161,9 +180,10 @@
     --muted:#9AA096;
     --surface:#1B211E;
     --bg:#0E1210;
-    /* the whole point of this request: dark mode's menu panels take the same
-       colour the header has always used (a translucent near-black ink
-       blur), instead of light mode's transparent-white. */
+    /* dark mode's menu panels -- and, as of the light-mode header follow-up,
+       the header itself too, since it's no longer special-cased -- take the
+       same translucent near-black ink blur; light mode gets the
+       transparent-white back. */
     --menu-bg:rgba(20,24,22,.72);
     --menu-border:rgba(255,255,255,.12);
     --hover-tint:rgba(255,255,255,.07);
@@ -173,6 +193,18 @@
     --handle:rgba(255,255,255,.22);
     --handle-active:rgba(255,255,255,.4);
     --swatch-border:rgba(255,255,255,.25);
+    /* matches the old hardcoded .info-btn.on-dark / .top-bar .icon-btn /
+       .tb-search rgba(255,255,255,..) values exactly -- see the :root
+       comment above these tokens. */
+    --chrome-chip-bg:rgba(255,255,255,.1);
+    --chrome-chip-hover:rgba(255,255,255,.2);
+    --chrome-chip-border:rgba(255,255,255,.2);
+    /* darker than the drawer's own --menu-bg (rgba(20,24,22,.72)), not just
+       a same-opacity inversion of light mode's white -- a black-tinted
+       overlay deepens the drawer's own dark glass further instead of
+       lightening it, so each checklist card still reads as a distinct,
+       *darker* card against the panel, per Karim's explicit request. */
+    --checklist-card-bg:rgba(0,0,0,.35);
     --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 34px rgba(0,0,0,.4);
   }
   *{box-sizing:border-box;}
@@ -201,11 +233,15 @@
      warning even collapsed down to one line. */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;font-size:11.5px;font-weight:800;font-style:italic;font-family:Georgia,'Times New Roman',serif;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;flex:0 0 auto;line-height:1;padding:0;transition:background .12s ease,color .12s ease;}
   .info-btn:hover{background:var(--hover-tint);color:var(--ink);}
-  .info-btn.on-dark{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4);}
-  .info-btn.on-dark:hover{background:rgba(255,255,255,.26);}
+  /* v103 (light-mode header follow-up): was hardcoded white-on-dark, back
+     when .top-bar was always dark glass -- now themed via --chrome-chip-*
+     (see the :root comment by those tokens), which reproduces these exact
+     pixels in dark mode and gives light mode a correctly-inverted version. */
+  .info-btn.on-dark{background:var(--chrome-chip-bg);color:var(--ink);border-color:var(--chrome-chip-border);}
+  .info-btn.on-dark:hover{background:var(--chrome-chip-hover);}
 
-  .caution-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid color-mix(in srgb, var(--red) 55%, transparent);border-radius:var(--radius-pill);padding:7px 12px;font-size:12px;font-weight:700;color:color-mix(in srgb, var(--red) 45%, #fff);cursor:pointer;font-family:inherit;white-space:nowrap;}
-  .caution-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
+  .caution-btn{display:inline-flex;align-items:center;gap:6px;background:var(--chrome-chip-bg);border:1px solid color-mix(in srgb, var(--red) 55%, transparent);border-radius:var(--radius-pill);padding:7px 12px;font-size:12px;font-weight:700;color:color-mix(in srgb, var(--red) 50%, var(--ink));cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .caution-btn:hover{background:var(--chrome-chip-hover);color:var(--ink);}
   .caution-btn .dot{font-size:13px;line-height:1;}
 
   /* v63: icon-only button for the top bar (address/place search trigger) --
@@ -213,8 +249,8 @@
      button rather than a small "i" toggle, since this opens a whole modal
      rather than just revealing a sentence. Icon-only (no label text) is
      deliberate given the header's history of wrapping at narrow widths. */
-  .top-bar .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;border-radius:9px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:15px;cursor:pointer;flex:0 0 auto;transition:background .12s ease;}
-  .top-bar .icon-btn:hover{background:rgba(255,255,255,.2);}
+  .top-bar .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;border-radius:9px;background:var(--chrome-chip-bg);border:1px solid var(--chrome-chip-border);color:var(--ink);font-size:15px;cursor:pointer;flex:0 0 auto;transition:background .12s ease;}
+  .top-bar .icon-btn:hover{background:var(--chrome-chip-hover);}
 
   .place-search-results{margin-top:10px;max-height:280px;overflow-y:auto;}
   .place-search-result{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font:inherit;font-size:12.5px;line-height:1.4;color:var(--ink);}
@@ -241,15 +277,19 @@
      on one line. */
   /* v102: was a solid navy-blue gradient bar; every other floating panel in
      this app (bottom report, checklist, tools drawer) was already a
-     translucent-white blur, so the header was the one piece of chrome that
-     didn't match either its own siblings or KAGE's own sticky-header
-     treatment (also a translucent blur, just light-on-light there). Kept it
-     dark rather than switching it to the same off-white as the drawers --
-     the header is the one persistent anchor on screen the whole time the
-     map's own imagery is showing through everywhere else, and a dark glass
-     bar reads as "chrome" against that in a way an off-white one wouldn't
-     -- so it's now a translucent near-black ink blur instead of navy. */
-  .top-bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;color:#fff;background:rgba(20,24,22,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 20px rgba(20,24,22,.24);}
+     translucent blur, so the header was the one piece of chrome that didn't
+     match either its own siblings or KAGE's own sticky-header treatment
+     (also a translucent blur). Moved to the same translucent glass language
+     -- initially kept permanently dark regardless of theme (see below).
+     v103 follow-up: that "always dark" special-case is gone -- Karim asked
+     for the header to flip with the theme like every other panel, so it now
+     just uses --menu-bg/var(--ink) the same as the drawers/modals/map key
+     do, and its "on-chrome" child controls (the small icon buttons, the
+     search box) use the new --chrome-chip-* tokens instead of hardcoded
+     white -- see the :root comment by those tokens. In dark mode this is
+     pixel-identical to before (--menu-bg's dark value *is* the old
+     hardcoded rgba(20,24,22,.72)); light mode is what's new. */
+  .top-bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;color:var(--ink);background:var(--menu-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:var(--shadow);}
   /* v103: "less fancy, more sleek and modern" -- v102's italic Newsreader
      serif read as ornate for the one piece of chrome that's visible on every
      single screen at all times, so the header title (only the header title
@@ -257,7 +297,6 @@
      as before, since that wasn't what was asked to change) drops back to the
      app's own sans face, bold and tightly tracked instead. */
   .top-bar .tb-title{font-family:"Hanken Grotesk";font-weight:700;font-size:15.5px;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;white-space:nowrap;}
-  .top-bar .tb-title .icon{font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
   .tb-left{display:flex;align-items:center;flex:0 0 auto;}
   .tb-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
 
@@ -287,10 +326,10 @@
      before -- they only ever care about the wrap's width, not which element
      inside it they're visually under. */
   .tb-search-row{position:relative;display:flex;align-items:center;gap:8px;width:100%;}
-  .tb-search{position:relative;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);border-radius:var(--radius-pill);padding:4px 4px 4px 16px;flex:1 1 auto;min-width:0;box-sizing:border-box;}
+  .tb-search{position:relative;display:flex;align-items:center;gap:6px;background:var(--chrome-chip-bg);border:1px solid var(--chrome-chip-border);border-radius:var(--radius-pill);padding:4px 4px 4px 16px;flex:1 1 auto;min-width:0;box-sizing:border-box;}
   .tb-search:focus-within{outline:2px solid var(--accent);outline-offset:1px;}
-  .tb-search input{flex:1 1 auto;min-width:0;padding:6px 4px;border:0;background:transparent;border-radius:5px;font-size:13px;color:#fff;}
-  .tb-search input::placeholder{color:rgba(255,255,255,.45);}
+  .tb-search input{flex:1 1 auto;min-width:0;padding:6px 4px;border:0;background:transparent;border-radius:5px;font-size:13px;color:var(--ink);}
+  .tb-search input::placeholder{color:var(--muted);}
   .tb-search input:focus{outline:none;}
   .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border:0;border-radius:var(--radius-pill);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
   .tb-search #searchGoBtn:hover{background:color-mix(in srgb, var(--accent) 82%, #000);}
@@ -300,7 +339,11 @@
      placement instead and #searchStatus/.header-progress just stack inside
      it via flex -- see the HTML above the header search box. */
   .tb-status-wrap{position:absolute;top:calc(100% + 6px);left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:5px;}
-  #searchStatus{font-size:11px;color:#c3cde6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;max-width:100%;}
+  /* v103 (light-mode header follow-up): was a navy-era hardcoded light
+     blue-gray (#c3cde6), which pre-dates v102's reskin and had gone unfixed
+     since -- illegible against a light header. var(--muted) is what every
+     other panel already uses for this exact "secondary text" role. */
+  #searchStatus{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;max-width:100%;}
   .tb-search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);max-height:280px;overflow-y:auto;padding:6px;z-index:10;}
   .tb-search-results .place-search-result{margin-bottom:4px;}
   .tb-search-results .place-search-result:last-child{margin-bottom:0;}
@@ -314,9 +357,9 @@
      background instead of the drawer's light card background. */
   .header-progress{display:flex;flex-direction:column;gap:3px;width:100%;max-width:280px;}
   .header-progress[hidden]{display:none;} /* v75's #spotsProgress note applies here too -- see .td-status's old comment: an author display rule always beats the UA [hidden]{display:none} at equal specificity */
-  .hp-track{height:5px;border-radius:4px;background:rgba(255,255,255,.18);overflow:hidden;}
-  .hp-fill{height:100%;width:0%;background:#fff;border-radius:4px;transition:width .15s ease;}
-  .hp-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:#c3cde6;}
+  .hp-track{height:5px;border-radius:4px;background:var(--chrome-chip-border);overflow:hidden;}
+  .hp-fill{height:100%;width:0%;background:var(--accent);border-radius:4px;transition:width .15s ease;}
+  .hp-row{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:var(--muted);}
   .hp-pct{font-weight:700;white-space:nowrap;}
   .hp-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;}
 
@@ -407,7 +450,7 @@
   /* the checklist cards themselves stay part-see-through too, not just the
      panel chrome around them -- otherwise the full-width list of items would
      visually read as an ordinary opaque sidebar */
-  .side-checklist .checklist-group{background:rgba(255,255,255,.6);}
+  .side-checklist .checklist-group{background:var(--checklist-card-bg);}
   .side-checklist .checklist-item{background:transparent;}
   .side-checklist .checklist-item:hover{background:var(--hover-tint);}
 
@@ -746,16 +789,20 @@
   /* v78: flex:1 lets .txt claim the row's slack space so .ci-actions (the
      "i"/"See report" group) always lands flush against the right edge
      instead of trailing immediately after the title text. */
-  .checklist-item .txt{flex:1 1 auto;min-width:120px;font-size:13px;line-height:1.55;color:var(--body-ink);}
+  .checklist-item .txt{flex:1 1 auto;min-width:120px;display:flex;align-items:center;gap:9px;font-size:13px;line-height:1.55;color:var(--body-ink);}
   .checklist-item:has(input:checked) .txt{color:var(--muted);}
   .checklist-item:has(input:checked) .txt b{color:var(--muted);}
-  .checklist-item .txt .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.4px;padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:1px;}
-  .tag.manual{background:var(--manual-bg);color:var(--manual-fg);}
-  /* v77: replaces the old blue "AUTO" tag -- an auto item's tag now IS its
-     result (whether the check actually ran), not a category label sitting
-     next to a separate inline result sentence. */
-  .tag.done{background:var(--green-bg);color:var(--green);}
-  .tag.incomplete{background:var(--red-bg);color:var(--red);}
+  /* v103 (checklist follow-up): replaces the old text pills ("Done"/
+     "Incomplete"/"MANUAL") with a small coloured status dot, matching how
+     the KAGE marketing site's own map-page preview marks each row's status
+     (.rows li i there) instead of spelling it out in a tag. Same
+     done=green/incomplete=red semantics this app already used, plus
+     manual items get the same amber-ish tone their "i" button/MANUAL tag
+     used to carry (--manual-fg), now on the dot instead of a text badge. */
+  .ci-dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  .ci-dot-done{background:var(--green);}
+  .ci-dot-incomplete{background:var(--red);}
+  .ci-dot-manual{background:var(--manual-fg);}
   .checklist-item a{color:var(--accent-ink);}
   /* v77: a smaller .info-btn variant (same pattern as .lg-i in the map key)
      for each checklist item's "i" button, plus the pill-style "jump to its
@@ -923,7 +970,7 @@
 
 <div class="top-bar" id="topBar">
   <div class="tb-left">
-    <div class="tb-title"><span class="icon">🎯</span> BC Shooting Location Checker <button class="info-btn on-dark" id="headerInfoBtn" title="About this tool" aria-label="About this tool">i</button></div>
+    <div class="tb-title">Shooting Map <button class="info-btn on-dark" id="headerInfoBtn" title="About this tool" aria-label="About this tool">i</button></div>
   </div>
   <div class="tb-search-wrap">
     <div class="tb-search-row">
@@ -978,7 +1025,7 @@
   <button type="button" class="sc-tab" id="sideChecklistTab">Checklist</button>
   <div class="sc-panel">
     <div class="sc-head">
-      <h2>✅ Full checklist <button class="info-btn" id="checklistInfoBtn" title="How this checklist works" aria-label="How this checklist works">i</button></h2>
+      <h2>Full checklist <button class="info-btn" id="checklistInfoBtn" title="How this checklist works" aria-label="How this checklist works">i</button></h2>
       <button class="small-btn" id="resetChecks">Reset</button>
       <button class="sc-close" id="sideChecklistClose" aria-label="Close checklist">✕</button>
     </div>
@@ -1327,7 +1374,7 @@ const SOURCES_HTML = `
 `;
 document.getElementById('sourcesInfoBtn').addEventListener('click', () => openInfoModal('Data sources &amp; attribution', SOURCES_HTML));
 
-const CHECKLIST_HELP_HTML = `<div class="mrow"><b>Auto‑checked items</b> show <span style="color:var(--green);font-weight:800">Done</span> once that check has actually run against live data for the picked location — or <span style="color:var(--red);font-weight:800">Incomplete</span> before a location is picked, or if that particular data source failed to load just now. A Done item's "See report ›" button jumps straight to, and opens, the exact report card with what it actually found — the checklist itself only ever says whether the check ran, never repeats the result a second time.</div><div class="mrow"><b>Manual items</b> (orange <code>MANUAL</code> tag) can never be fully automated — read them (their "i" button has the background) and check them off yourself, every time.</div><div class="mrow">Every item's "i" button explains what it covers and why it matters. Checkbox state is only kept for this browsing session — nothing is saved, and reloading the page clears it.</div>`;
+const CHECKLIST_HELP_HTML = `<div class="mrow"><b>Auto‑checked items</b> get a <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green)"></span> green dot once that check has actually run against live data for the picked location — or a <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red)"></span> red dot before a location is picked, or if that particular data source failed to load just now. A green item's "See report ›" button jumps straight to, and opens, the exact report card with what it actually found — the checklist itself only ever says whether the check ran, never repeats the result a second time.</div><div class="mrow"><b>Manual items</b> (an <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--manual-fg)"></span> amber dot) can never be fully automated — read them (their "i" button has the background) and check them off yourself, every time.</div><div class="mrow">Every item's "i" button explains what it covers and why it matters. Checkbox state is only kept for this browsing session — nothing is saved, and reloading the page clears it.</div>`;
 document.getElementById('checklistInfoBtn').addEventListener('click', () => openInfoModal('How the checklist works', CHECKLIST_HELP_HTML));
 
 // v67: "Reveal Crown Land (this view)" / "Show Potential Spots (this view)"
@@ -2599,11 +2646,11 @@ const CHECKLIST_EXTRA_MODALS = {
 // (flex:1 1 auto) so .ci-actions lands flush right regardless of how long
 // the title is, "i" always before "See report".
 function autoChecklistItemHtml(item, ok){
-  const pillClass = ok ? "done" : "incomplete";
-  const pillText = ok ? "Done" : "Incomplete";
+  const dotClass = ok ? "done" : "incomplete";
+  const dotLabel = ok ? "Done" : "Incomplete";
   const jump = ok ? `<button type="button" class="ci-jump" data-jump="${item.cardKey}">See report &rsaquo;</button>` : "";
   return `<div class="checklist-item">
-      <div class="txt"><span class="tag ${pillClass}">${pillText}</span><b>${item.title}</b></div>
+      <div class="txt"><span class="ci-dot ci-dot-${dotClass}" title="${dotLabel}" aria-label="${dotLabel}"></span><b>${item.title}</b></div>
       <div class="ci-actions"><button type="button" class="info-btn ci-i" data-info="${item.id}" title="More about this" aria-label="More about this">i</button>${jump}</div>
     </div>`;
 }
@@ -2611,7 +2658,7 @@ function manualChecklistItemHtml(item){
   const extra = item.extra || "";
   return `<div class="checklist-item">
       <input type="checkbox" id="chk-${item.id}">
-      <div class="txt"><span class="tag manual">MANUAL</span><b>${item.title}</b></div>
+      <div class="txt"><span class="ci-dot ci-dot-manual" title="Manual — check it yourself" aria-label="Manual — check it yourself"></span><b>${item.title}</b></div>
       <div class="ci-actions"><button type="button" class="info-btn ci-i" data-info="${item.id}" title="More about this" aria-label="More about this">i</button>${extra}</div>
     </div>`;
 }
