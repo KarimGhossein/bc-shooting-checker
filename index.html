@@ -346,8 +346,12 @@
      itself up/down by half that amount every time the text changed. */
   /* v106: max-width 560 -> 602px, i.e. exactly +42px for the pin button
      (34px + 8px gap) that moved into .tb-search-row, so the search box
-     itself keeps its previous 233px width instead of shrinking to 191px. */
-  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:602px;padding:0 150px;box-sizing:border-box;}
+     itself keeps its previous 233px width instead of shrinking to 191px.
+     v107: grows with the window above that -- clamp(602px, 50vw, 760px).
+     Safe at every width: the search row spans 25vw+150px .. 75vw-150px,
+     which never reaches .tb-left (~220px) or .tb-right (~250px) above the
+     760px stacked-mobile breakpoint. */
+  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:clamp(602px, 50vw, 760px);padding:0 150px;box-sizing:border-box;}
   /* v76: Karim asked for the "i" (how-to-search) icon to move out of the
      search box itself, to sit to the right of the Search button instead --
      .tb-search-row holds the actual search box and that icon side by side,
@@ -362,7 +366,7 @@
   .tb-search input{flex:1 1 auto;min-width:0;padding:6px 4px;border:0;background:transparent;border-radius:5px;font-size:13px;color:var(--ink);}
   .tb-search input::placeholder{color:var(--muted);}
   .tb-search input:focus{outline:none;}
-  .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border:0;border-radius:var(--radius-pill);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
+  .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:0;border-radius:var(--radius-pill);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
   .tb-search #searchGoBtn:hover{background:color-mix(in srgb, var(--accent) 82%, #000);}
   /* v88: #searchStatus used to carry its own position:absolute (top:calc(100%
      + 6px)) directly; now that the Potential Spots progress bar sits right
@@ -1011,7 +1015,16 @@
            search box, so both ways of choosing a location live together. -->
       <button type="button" class="icon-btn" id="dragPinBtn" draggable="true" title="Drag this onto the map to drop a pin exactly where you want it" aria-label="Drag this onto the map to drop a pin exactly where you want it">📌</button>
       <div class="tb-search">
-        <input id="searchInput" type="text" placeholder="Search address or place name, or enter coordinates (49.2827, -123.1207)">
+        <!-- v107: shorter placeholder -- the old one ("Search address or place
+             name, or enter coordinates (49.2827, -123.1207)") was cut off at
+             "Search address or p": the input's text area is only ~118px at the
+             narrowest desktop width. "Place or coordinates" (119px at 13px
+             Hanken Grotesk) fits once #searchGoBtn's side padding drops 18->14px
+             (and the box itself now grows on wider screens, see
+             .tb-search-wrap). The "i" right of the bar explains the coordinate
+             format. aria-label added because a placeholder is not an accessible
+             name. -->
+        <input id="searchInput" type="text" placeholder="Place or coordinates" aria-label="Search by address, place name or coordinates">
         <button id="searchGoBtn">Search</button>
       </div>
       <button class="info-btn on-dark" id="coordInfoBtn" title="How to search" aria-label="How to search">i</button>
