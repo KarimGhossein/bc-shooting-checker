@@ -4,6 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BC Shooting Location Checker</title>
+<!-- v103: applies the saved (or default) theme to <html> as the very first
+     thing that runs, before any stylesheet paints -- [data-theme="dark"] and
+     [data-theme="light"] both exist as real CSS overrides (see :root below),
+     so this has to run before first paint or the page would flash the wrong
+     theme for a frame on every load. Defaults to dark (Karim's explicit
+     instruction) whenever localStorage has no saved choice yet, or is
+     unavailable at all (private browsing, disabled storage) -- see
+     applyTheme()/THEME_STORAGE_KEY further down for the toggle itself. -->
+<script>
+(function(){
+  try{
+    var saved = localStorage.getItem('bcShootingChecker_theme_v1');
+    document.documentElement.dataset.theme = (saved === 'light') ? 'light' : 'dark';
+  }catch(e){
+    document.documentElement.dataset.theme = 'dark';
+  }
+})();
+</script>
 <!-- v102: replaced Space Grotesk (v65) with a two-font pairing -- Newsreader
      (serif, italic, used sparingly for a handful of "premium" headline
      moments) + Hanken Grotesk (sans, everything else: body copy and every
@@ -49,19 +67,51 @@
        HTML strings (see CHECKLIST_HELP_HTML and the Leaflet-load-failure
        message further down) and dozens of CSS rules across this file
        reference these by name, so only the values move; nothing that reads
-       var(--red)/var(--navy)/etc needed to change. Dark mode (KAGE supports
-       it) is a deliberate v102 omission, not an oversight -- see the
-       comment above .top-bar for why. */
+       var(--red)/var(--navy)/etc needed to change.
+       v103: dark mode added (was a deliberate v102 omission -- see the old
+       comment above .top-bar, now superseded). :root here holds light-theme
+       values; :root[data-theme="dark"] below overrides them -- and because a
+       custom property's var() references resolve lazily, at the point
+       something actually asks for its computed value, every derived token
+       below (--red-bg, --red-line, etc, built from var(--red) and
+       var(--tint-base)) automatically recomputes for whichever theme is
+       active without needing its own formula restated in the dark block --
+       only the base hues (--red) and --tint-base itself are overridden
+       there. --navy/--navy-2 are deliberately NOT overridden for dark: they
+       were already a constant near-black "always dark chrome" tone (the
+       header, both drawer tabs, the segmented-control thumb) in both
+       pre-v103 states, and stay exactly that in both themes now too --
+       Karim's own instruction was that dark mode's *menu* backgrounds should
+       match the header's colour, not that the header itself should change. */
+    color-scheme:light;
     --navy:#14181A; --navy-2:#232A26; --accent:#8A6632; --accent-ink:#6B4F26;
-    --red:#B5463B;   --red-bg:color-mix(in srgb, var(--red) 13%, #fff);   --red-line:color-mix(in srgb, var(--red) 34%, #fff);
-    --amber:#B7832A; --amber-bg:color-mix(in srgb, var(--amber) 13%, #fff); --amber-line:color-mix(in srgb, var(--amber) 34%, #fff);
-    --green:#3C8A57; --green-bg:color-mix(in srgb, var(--green) 13%, #fff); --green-line:color-mix(in srgb, var(--green) 34%, #fff);
-    --gray:#8B928E;  --gray-bg:color-mix(in srgb, var(--gray) 13%, #fff);  --gray-line:color-mix(in srgb, var(--gray) 34%, #fff);
+    --tint-base:#fff;
+    --red:#B5463B;   --red-bg:color-mix(in srgb, var(--red) 13%, var(--tint-base));   --red-line:color-mix(in srgb, var(--red) 34%, var(--tint-base));
+    --amber:#B7832A; --amber-bg:color-mix(in srgb, var(--amber) 13%, var(--tint-base)); --amber-line:color-mix(in srgb, var(--amber) 34%, var(--tint-base));
+    --green:#3C8A57; --green-bg:color-mix(in srgb, var(--green) 13%, var(--tint-base)); --green-line:color-mix(in srgb, var(--green) 34%, var(--tint-base));
+    --gray:#8B928E;  --gray-bg:color-mix(in srgb, var(--gray) 13%, var(--tint-base));  --gray-line:color-mix(in srgb, var(--gray) 34%, var(--tint-base));
     --border:#E7E4DC;
     --ink:#14181A;
+    --body-ink:#2A2E29;
     --muted:#767B74;
     --surface:#ffffff;
     --bg:#F6F6F3;
+    /* v103: the floating "menu" panels -- top bar, bottom report drawer,
+       tools/checklist drawers, map key, My Markup panel, the Mapping
+       Functions status card -- all key off these two instead of each having
+       its own hardcoded rgba(...). The top bar itself stays hardcoded to the
+       header's own always-dark colour (see .top-bar below) rather than
+       reading --menu-bg, since it's the fixed reference point dark mode's
+       --menu-bg is defined to match, not a themed element itself. */
+    --menu-bg:rgba(246,246,243,.72);
+    --menu-border:rgba(255,255,255,.6);
+    --hover-tint:#F1EEE5;
+    --manual-bg:#ffe9d2; --manual-fg:#8a4a06;
+    --scroll-thumb:#DAD8CE;
+    --seg-track:rgba(20,24,22,.06);
+    --handle:rgba(0,0,0,.18);
+    --handle-active:rgba(0,0,0,.32);
+    --swatch-border:rgba(0,0,0,.15);
     --radius:18px;
     --radius-lg:26px;
     --radius-pill:999px;
@@ -90,6 +140,41 @@
        which drawer (if either) is open and their two different widths. */
     --right-drawer-w:0px;
   }
+  /* v103: dark mode. Applied via [data-theme="dark"] on <html>, set as the
+     very first thing that runs in <head> (see the inline script right after
+     <title>) so it's already in place before first paint -- default is dark
+     whenever nothing's saved yet, per Karim's explicit instruction; a saved
+     "light" choice (from the Appearance toggle in the Tools drawer, see
+     applyTheme()) overrides it. Only the tokens that actually need a
+     different value in the dark theme are listed here -- --navy/--navy-2,
+     --radius*, --shadow's shape (not its colour), --tb-h/--sc-tab-h/
+     --right-drawer-w (layout, not colour) all carry over unchanged from
+     :root above. */
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --accent:#C9A56B; --accent-ink:#C9A56B;
+    --tint-base:#1B211E;
+    --red:#E0776A; --amber:#E0AC5C; --green:#6FC08A; --gray:#ACB2AC;
+    --border:#262C28;
+    --ink:#EEF0EC;
+    --body-ink:#CDD2CC;
+    --muted:#9AA096;
+    --surface:#1B211E;
+    --bg:#0E1210;
+    /* the whole point of this request: dark mode's menu panels take the same
+       colour the header has always used (a translucent near-black ink
+       blur), instead of light mode's transparent-white. */
+    --menu-bg:rgba(20,24,22,.72);
+    --menu-border:rgba(255,255,255,.12);
+    --hover-tint:rgba(255,255,255,.07);
+    --manual-bg:#3D2C16; --manual-fg:#E3AE72;
+    --scroll-thumb:#3A413C;
+    --seg-track:rgba(255,255,255,.08);
+    --handle:rgba(255,255,255,.22);
+    --handle-active:rgba(255,255,255,.4);
+    --swatch-border:rgba(255,255,255,.25);
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 34px rgba(0,0,0,.4);
+  }
   *{box-sizing:border-box;}
   html,body{height:100%;}
   /* The whole app is now one full-screen map (v41) -- the page itself never
@@ -115,7 +200,7 @@
      the specific case of the legal disclaimer, styled to still read as a
      warning even collapsed down to one line. */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;font-size:11.5px;font-weight:800;font-style:italic;font-family:Georgia,'Times New Roman',serif;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;flex:0 0 auto;line-height:1;padding:0;transition:background .12s ease,color .12s ease;}
-  .info-btn:hover{background:#ECEAE2;color:var(--ink);}
+  .info-btn:hover{background:var(--hover-tint);color:var(--ink);}
   .info-btn.on-dark{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4);}
   .info-btn.on-dark:hover{background:rgba(255,255,255,.26);}
 
@@ -133,7 +218,7 @@
 
   .place-search-results{margin-top:10px;max-height:280px;overflow-y:auto;}
   .place-search-result{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font:inherit;font-size:12.5px;line-height:1.4;color:var(--ink);}
-  .place-search-result:hover{background:#F1EEE5;border-color:var(--accent);}
+  .place-search-result:hover{background:var(--hover-tint);border-color:var(--accent);}
 
   /* ---- full-screen map shell (v41): top bar, bottom report drawer, side
      checklist drawer, all floating over an edge-to-edge map ---- */
@@ -165,7 +250,13 @@
      bar reads as "chrome" against that in a way an off-white one wouldn't
      -- so it's now a translucent near-black ink blur instead of navy. */
   .top-bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;color:#fff;background:rgba(20,24,22,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 20px rgba(20,24,22,.24);}
-  .top-bar .tb-title{font-family:"Newsreader";font-style:italic;font-weight:500;font-size:17px;letter-spacing:0;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  /* v103: "less fancy, more sleek and modern" -- v102's italic Newsreader
+     serif read as ornate for the one piece of chrome that's visible on every
+     single screen at all times, so the header title (only the header title
+     -- modal headings and the verdict headline keep the same serif treatment
+     as before, since that wasn't what was asked to change) drops back to the
+     app's own sans face, bold and tightly tracked instead. */
+  .top-bar .tb-title{font-family:"Hanken Grotesk";font-weight:700;font-size:15.5px;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;white-space:nowrap;}
   .top-bar .tb-title .icon{font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
   .tb-left{display:flex;align-items:center;flex:0 0 auto;}
   .tb-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
@@ -247,17 +338,17 @@
      open width (260/360px) lets both be open and legible together instead,
      the same "real measured value over a hardcoded guess" pattern the rest
      of this app already uses for --tb-h/--sc-tab-h. */
-  .bottom-panel{position:fixed;left:0;right:var(--right-drawer-w);bottom:0;z-index:550;display:flex;flex-direction:column;max-height:64vh;background:rgba(246,246,243,.74);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.6);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 -6px 28px rgba(20,24,22,.14);transition:right .18s ease;}
+  .bottom-panel{position:fixed;left:0;right:var(--right-drawer-w);bottom:0;z-index:550;display:flex;flex-direction:column;max-height:64vh;background:var(--menu-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--menu-border);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 -6px 28px rgba(20,24,22,.14);transition:right .18s ease;}
   .bottom-panel.resizing{transition:none;} /* no fighting the drag with any (future) height transition */
   /* Drag-to-resize handle -- a small grip bar spanning the top edge, always
      shown (even collapsed, so grabbing it both opens *and* sizes the drawer
      in one motion, bottom-sheet style). See the resize JS near
      bottomPanelToggle for the actual drag handling. */
   .bp-resize-handle{flex:0 0 auto;display:flex;align-items:center;justify-content:center;height:14px;cursor:ns-resize;touch-action:none;}
-  .bp-resize-handle::before{content:"";width:36px;height:4px;border-radius:3px;background:rgba(0,0,0,.18);}
-  .bp-resize-handle:hover::before,.bottom-panel.resizing .bp-resize-handle::before{background:rgba(0,0,0,.32);}
+  .bp-resize-handle::before{content:"";width:36px;height:4px;border-radius:3px;background:var(--handle);}
+  .bp-resize-handle:hover::before,.bottom-panel.resizing .bp-resize-handle::before{background:var(--handle-active);}
   .bp-handle{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:2px 20px 12px;cursor:pointer;font:inherit;text-align:left;flex:0 0 auto;}
-  .bp-handle:hover{background:rgba(0,0,0,.025);}
+  .bp-handle:hover{background:var(--hover-tint);}
   .bp-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex:0 0 auto;}
   .bp-dot.red{background:var(--red);} .bp-dot.amber{background:var(--amber);} .bp-dot.green{background:var(--green);} .bp-dot.gray{background:var(--gray);}
   .bp-summary{font-size:13.5px;font-weight:700;color:var(--ink);flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -287,7 +378,7 @@
   .side-checklist{position:fixed;top:var(--tb-h);right:0;bottom:0;z-index:560;display:flex;pointer-events:none;}
   .side-checklist > *{pointer-events:auto;}
   .sc-tab{align-self:flex-start;writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:12px 0 0 12px;padding:16px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);}
-  .sc-tab:hover{background:#233766;}
+  .sc-tab:hover{background:var(--navy-2);}
   /* v73: border/box-shadow live only on the .open rule below, not here --
      box-sizing:border-box (see :root above) still renders a 1px border (and
      a box-shadow, which paints regardless of the box's own width) on an
@@ -297,12 +388,12 @@
      hairline sliver sitting just past the collapsed tab -- exactly the bug
      Karim reported on the tools drawer's mirror-image twin below. Fixed at
      the root here too, not just on the one Karim noticed. */
-  .sc-panel{width:0;overflow:hidden;height:100%;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
-  .side-checklist.open .sc-panel{width:360px;border-left:1px solid rgba(255,255,255,.6);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
+  .sc-panel{width:0;overflow:hidden;height:100%;background:var(--menu-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
+  .side-checklist.open .sc-panel{width:360px;border-left:1px solid var(--menu-border);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
   .sc-head{display:flex;align-items:center;gap:8px;padding:16px 16px 10px;flex:0 0 auto;}
   .sc-head h2{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:7px;white-space:nowrap;}
   .sc-close{margin-left:auto;background:none;border:0;font-size:15px;color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:6px;flex:0 0 auto;}
-  .sc-close:hover{background:rgba(0,0,0,.06);color:var(--ink);}
+  .sc-close:hover{background:var(--hover-tint);color:var(--ink);}
   /* v76: min-height:0 -- without it, a flex child with overflow-y:auto still
      refuses to shrink below its own content's intrinsic height (a flex
      item's automatic min-height is "auto", not 0), so past a certain content
@@ -318,7 +409,7 @@
      visually read as an ordinary opaque sidebar */
   .side-checklist .checklist-group{background:rgba(255,255,255,.6);}
   .side-checklist .checklist-item{background:transparent;}
-  .side-checklist .checklist-item:hover{background:rgba(0,0,0,.03);}
+  .side-checklist .checklist-item:hover{background:var(--hover-tint);}
 
   /* v76: both right-edge drawers (checklist above, tools below) hide their
      collapsed tab while EITHER is open, not just their own -- previously
@@ -355,12 +446,12 @@
      pattern v73 used for the old left-edge tab against Leaflet's controls. */
   .td-tab{align-self:flex-start;margin-top:calc(var(--sc-tab-h) + 10px);writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:12px 0 0 12px;padding:14px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);transition:background .12s ease;}
   .td-tab:hover{background:var(--navy-2);}
-  .td-panel{width:0;overflow:hidden;height:100%;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
-  .tools-drawer.open .td-panel{width:270px;border-left:1px solid rgba(255,255,255,.6);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
+  .td-panel{width:0;overflow:hidden;height:100%;background:var(--menu-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
+  .tools-drawer.open .td-panel{width:270px;border-left:1px solid var(--menu-border);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
   .td-head{display:flex;align-items:center;gap:8px;padding:16px 16px 10px;flex:0 0 auto;}
   .td-head h2{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:7px;white-space:nowrap;}
   .td-close{margin-left:auto;background:none;border:0;font-size:15px;color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:6px;flex:0 0 auto;}
-  .td-close:hover{background:rgba(0,0,0,.06);color:var(--ink);}
+  .td-close:hover{background:var(--hover-tint);color:var(--ink);}
   .td-scroll{flex:1 1 auto;overflow-y:auto;padding:0 16px 16px;display:flex;flex-direction:column;gap:14px;min-height:0;} /* min-height:0 -- see the .checklist-scroll comment above for why this is the actual fix, not just belt-and-suspenders */
   /* v73: the panel's contents read as distinct groups rather than one
      undifferentiated stack of buttons+text. v76: "Potential spots" is no
@@ -370,7 +461,7 @@
      result/progress belong together, not split across two labelled groups. */
   .td-group{display:flex;flex-direction:column;gap:7px;}
   .td-group-label{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);}
-  .td-divider{border:0;border-top:1px solid rgba(0,0,0,.08);margin:0;}
+  .td-divider{border:0;border-top:1px solid var(--border);margin:0;}
 
   /* v75: basemap picker moved off the map (it used to float top-right,
      competing with whatever else lives in that corner) and into its own
@@ -380,7 +471,16 @@
      separate .bm-btn buttons only implied via a colour change on whichever
      one happened to be active. Markup and thumb math both key off
      data-base's index among the three .seg3-btn children. */
-  .seg3{position:relative;display:flex;background:rgba(20,24,22,.06);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px;gap:2px;}
+  .seg3{position:relative;display:flex;background:var(--seg-track);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px;gap:2px;}
+  /* v103: same 2-way segmented slider as .seg3 above, just one fewer
+     stop -- used by the new Appearance (Dark/Light) toggle. Kept as its own
+     class rather than a 2-item .seg3 so the existing basemap click handler
+     (querySelectorAll('.seg3-btn'), which assumes `data-base` and
+     BASE_LAYERS[key]) never accidentally picks up these buttons too. */
+  .seg2{position:relative;display:flex;background:var(--seg-track);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px;gap:2px;}
+  .seg2-thumb{position:absolute;top:3px;left:3px;width:calc((100% - 8px)/2);height:calc(100% - 6px);background:var(--navy);border-radius:var(--radius-pill);transition:transform .18s ease;}
+  .seg2-btn{position:relative;z-index:1;flex:1 1 0;min-width:0;border:0;background:none;padding:7px 3px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;border-radius:var(--radius-pill);white-space:nowrap;text-align:center;transition:color .12s ease;}
+  .seg2-btn.active{color:#fff;}
   /* width matches one button's own rendered width exactly (container minus
      2x3px padding minus 2x2px gap, divided by 3) so moveBasemapThumb()'s
      translateX(idx * 100% + idx * 2px) -- 100% of the thumb's *own* width
@@ -395,7 +495,7 @@
      run's actual result. A light card gives it the same "this is a distinct
      piece of information" treatment every status/result area in the rest of
      the app already gets (report cards, the checklist). */
-  .td-status{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
+  .td-status{background:var(--menu-bg);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
   /* v96: this card only ever holds #mapActionsNote, and every call site sets
      that with real text (see revealAllParcels()/revealAllRoads()/
      revealPotentialSpots()/runPotentialSpotsSearch() and its own comment on
@@ -415,7 +515,7 @@
   .modal-head h3{margin:0;font-family:"Newsreader";font-style:italic;font-weight:500;font-size:19px;color:var(--ink);line-height:1.4;}
   .modal-close{background:none;border:0;font-size:15px;line-height:1;cursor:pointer;color:var(--muted);padding:3px 6px;border-radius:6px;flex:0 0 auto;}
   .modal-close:hover{background:var(--bg);color:var(--ink);}
-  .modal-body{font-size:13px;line-height:1.65;color:#2A2E29;}
+  .modal-body{font-size:13px;line-height:1.65;color:var(--body-ink);}
   .modal-body a{color:var(--accent-ink);}
   .modal-body b{color:var(--ink);}
   .modal-body .mrow{margin:5px 0;}
@@ -441,7 +541,7 @@
      button/row/note styles themselves survive here; the old
      position:absolute .map-actions box and the v69 .ma-label (a button
      again as of v71, so back to .ma-btn) are gone. */
-  .ma-btn{border:1px solid var(--border);background:#fff;font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:var(--radius-pill);cursor:pointer;color:var(--navy);text-align:left;}
+  .ma-btn{border:1px solid var(--border);background:var(--surface);font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:var(--radius-pill);cursor:pointer;color:var(--ink);text-align:left;}
   .ma-btn:hover{background:var(--bg);}
   .ma-btn.busy{opacity:.6;cursor:wait;}
   .ma-note{font-size:10.5px;color:var(--muted);line-height:1.4;}
@@ -461,7 +561,7 @@
      stays reachable without pushing the rest of the drawer down. */
   #clearMenuRow{position:relative;}
   .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:6px;z-index:10;max-height:280px;overflow-y:auto;}
-  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);}
+  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--ink);}
   .clear-menu-item:last-child{margin-bottom:0;}
   .clear-menu-item:hover{background:var(--bg);}
 
@@ -471,7 +571,7 @@
      to open over this corner, see the v75 body.tools-open history below)
      moved to the right edge, so the margin-left shift that used to live here
      is gone as dead code along with it. */
-  .map-legend{position:absolute;left:10px;bottom:66px;z-index:450;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:16px;padding:10px 12px;font-size:11.5px;line-height:1.6;box-shadow:var(--shadow);max-width:230px;}
+  .map-legend{position:absolute;left:10px;bottom:66px;z-index:450;background:var(--menu-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:16px;padding:10px 12px;font-size:11.5px;line-height:1.6;box-shadow:var(--shadow);max-width:230px;}
   /* v72: the header row now holds two controls (the expand/collapse toggle,
      plus a small "i" for the handful of legend-wide behaviour notes that
      aren't tied to any one row -- see the legendUsage entry in LEGEND_INFO)
@@ -500,7 +600,7 @@
      LEGEND_INFO below), which also just directly shrinks how tall this gets. */
   .lg-body.open{display:block;max-height:calc(100vh - var(--tb-h) - 110px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;}
   .map-legend .lg-row{display:flex;align-items:center;gap:7px;margin:2px 0;}
-  .map-legend .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid rgba(0,0,0,.15);}
+  .map-legend .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid var(--swatch-border);}
   .map-legend .sw.line{width:16px;height:0;border-radius:0;border:none;border-top:3px dashed;background:none;}
   /* v72: a smaller variant of .info-btn (19px is too big to sit comfortably
      at the end of an 11.5px legend row) -- reuses the same look/behaviour
@@ -573,7 +673,7 @@
   @media (max-width:600px){
     .verdict-flags{grid-template-columns:1fr;}
   }
-  .verdict .fine-print{margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08);font-size:12px;color:var(--muted);}
+  .verdict .fine-print{margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);}
 
   .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:var(--radius-pill);margin-right:6px;vertical-align:middle;}
   .badge.red{background:var(--red);color:#fff;}
@@ -581,7 +681,7 @@
   .badge.green{background:var(--green);color:#fff;}
   .badge.gray{background:var(--gray);color:#fff;}
 
-  .field{font-size:13px;margin:4px 0;color:#2A2E29;line-height:1.5;}
+  .field{font-size:13px;margin:4px 0;color:var(--body-ink);line-height:1.5;}
   .field b{color:var(--ink);font-weight:600;}
   .empty{color:var(--muted);font-size:13px;font-style:italic;}
 
@@ -629,7 +729,7 @@
      cardHTML()) -- same colour token as the card's own card-flag-* tint, one
      level darker via the existing --red/--amber/--green/--gray ink tokens
      (not the *-bg ones) so the label reads clearly against that tint. */
-  .flag-explain{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1);font-size:12.5px;line-height:1.55;}
+  .flag-explain{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:12.5px;line-height:1.55;}
   .flag-explain-label{font-weight:700;margin-bottom:4px;}
   .flag-explain-red .flag-explain-label{color:var(--red);}
   .flag-explain-amber .flag-explain-label{color:var(--amber);}
@@ -640,17 +740,17 @@
 
   .checklist-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:9px;}
   .checklist-item{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s ease;}
-  .checklist-item:hover{background:#FAFAF7;}
+  .checklist-item:hover{background:var(--hover-tint);}
   .checklist-item:last-child{border-bottom:none;}
-  .checklist-item input[type=checkbox]{margin-top:3px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--navy);cursor:pointer;}
+  .checklist-item input[type=checkbox]{margin-top:3px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
   /* v78: flex:1 lets .txt claim the row's slack space so .ci-actions (the
      "i"/"See report" group) always lands flush against the right edge
      instead of trailing immediately after the title text. */
-  .checklist-item .txt{flex:1 1 auto;min-width:120px;font-size:13px;line-height:1.55;color:#2A2E29;}
+  .checklist-item .txt{flex:1 1 auto;min-width:120px;font-size:13px;line-height:1.55;color:var(--body-ink);}
   .checklist-item:has(input:checked) .txt{color:var(--muted);}
   .checklist-item:has(input:checked) .txt b{color:var(--muted);}
   .checklist-item .txt .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.4px;padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:1px;}
-  .tag.manual{background:#ffe9d2;color:#8a4a06;}
+  .tag.manual{background:var(--manual-bg);color:var(--manual-fg);}
   /* v77: replaces the old blue "AUTO" tag -- an auto item's tag now IS its
      result (whether the check actually ran), not a category label sitting
      next to a separate inline result sentence. */
@@ -679,12 +779,12 @@
   .spinner{width:15px;height:15px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;flex:0 0 auto;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  .small-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:5px 12px;font-size:11.5px;font-weight:600;cursor:pointer;color:#3a3f3a;transition:background .12s ease;}
+  .small-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:5px 12px;font-size:11.5px;font-weight:600;cursor:pointer;color:var(--ink);transition:background .12s ease;}
   .small-btn:hover{background:var(--bg);}
 
   ::-webkit-scrollbar{width:10px;height:10px;}
-  ::-webkit-scrollbar-thumb{background:#DAD8CE;border-radius:6px;border:2px solid var(--bg);}
-  .bp-body::-webkit-scrollbar-thumb{border-color:#fff;}
+  ::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:6px;border:2px solid var(--bg);}
+  .bp-body::-webkit-scrollbar-thumb{border-color:var(--menu-bg);}
 
   /* ---- Custom map markup (onX-style pins/lines/areas) ---- */
   /* Leaflet.draw's own toolbar is restyled lightly to sit visually with the
@@ -712,7 +812,7 @@
      markupFlashStatus()'s querySelector below) and the same internal
      mp-toggle/mp-body collapse, just without its own position/right/bottom/
      z-index now that .td-scroll places it. */
-  #markupPanel{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:12px;font-size:11.5px;overflow:hidden;}
+  #markupPanel{background:var(--menu-bg);border:1px solid var(--border);border-radius:12px;font-size:11.5px;overflow:hidden;}
   .mp-toggle{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:10px 12px;margin:0;cursor:pointer;font:inherit;font-weight:800;letter-spacing:.4px;text-transform:uppercase;font-size:10px;color:var(--muted);}
   .mp-toggle .arrow{margin-left:auto;font-size:9px;transition:transform .15s ease;}
   .mp-toggle.open .arrow{transform:rotate(180deg);}
@@ -722,9 +822,9 @@
   .mp-empty{color:var(--muted);font-size:11px;line-height:1.5;padding:4px 2px;}
   .mp-row{display:flex;align-items:center;gap:7px;padding:6px 4px;border-radius:7px;cursor:pointer;}
   .mp-row:hover{background:var(--bg);}
-  .mp-row .mp-sw{width:11px;height:11px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.15);}
+  .mp-row .mp-sw{width:11px;height:11px;border-radius:50%;flex:0 0 auto;border:1px solid var(--swatch-border);}
   .mp-row .mp-sw.line{border-radius:0;height:3px;width:14px;border:none;}
-  .mp-row .mp-name{flex:1 1 auto;font-size:12px;color:#2A2E29;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-row .mp-name{flex:1 1 auto;font-size:12px;color:var(--body-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mp-row .mp-edit{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;flex:0 0 auto;}
   .mp-row .mp-edit:hover{color:var(--ink);}
   .mp-actions{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--border);}
@@ -737,7 +837,7 @@
   .mf-input:focus{outline:2px solid var(--accent);outline-offset:0;}
   .mf-colors{display:flex;gap:7px;flex-wrap:wrap;}
   .mf-swatch{width:24px;height:24px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0;}
-  .mf-swatch.sel{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset;}
+  .mf-swatch.sel{border-color:var(--ink);box-shadow:0 0 0 2px var(--surface) inset;}
   /* v93: icon picker, grouped by category under small uppercase labels
      (same visual language as .mf-label) so 17 icons don't read as one
      undifferentiated grid -- matches how the categories were chosen in the
@@ -746,14 +846,14 @@
   .mf-icon-group-label{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin:6px 0 5px 4px;}
   .mf-icon-group:first-child .mf-icon-group-label{margin-top:2px;}
   .mf-icon-group-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px;}
-  .mf-icon-btn{width:30px;height:30px;flex:0 0 auto;border-radius:9px;border:2px solid transparent;background:#fff;cursor:pointer;padding:5px;color:#565B54;display:flex;align-items:center;justify-content:center;}
+  .mf-icon-btn{width:30px;height:30px;flex:0 0 auto;border-radius:9px;border:2px solid transparent;background:var(--surface);cursor:pointer;padding:5px;color:var(--muted);display:flex;align-items:center;justify-content:center;}
   .mf-icon-btn svg{width:100%;height:100%;}
-  .mf-icon-btn:hover{background:#F1EEE5;}
-  .mf-icon-btn.sel{border-color:var(--accent);color:var(--accent);background:#fff;}
+  .mf-icon-btn:hover{background:var(--hover-tint);}
+  .mf-icon-btn.sel{border-color:var(--accent);color:var(--accent);background:var(--surface);}
   .mf-icon-btn.mf-icon-none{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.2px;}
   .mf-btnrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
   .small-btn.danger{color:var(--red);border-color:var(--red-line);background:var(--red-bg);}
-  .small-btn.danger:hover{background:#fbe0dc;}
+  .small-btn.danger:hover{background:color-mix(in srgb, var(--red) 24%, var(--surface));}
 
   /* v75: the search bar's absolute centring (.tb-search-wrap) reserves a
      fixed 150px of side padding for .tb-left/.tb-right to live in -- past
@@ -901,6 +1001,28 @@
       <button class="td-close" id="toolsDrawerClose" aria-label="Close tools">✕</button>
     </div>
     <div class="td-scroll">
+      <!-- v103: dark/light toggle, placed first since it governs the whole
+           app's chrome rather than just the map. Same 2-way segmented
+           slider pattern as the Map type picker right below it (.seg2
+           mirrors .seg3, kept as its own class so the basemap click handler
+           -- which assumes data-base/BASE_LAYERS on every .seg3-btn -- never
+           picks these two buttons up too). data-theme-choice="dark" starts
+           `active` in the markup to match the real default (dark unless a
+           saved choice says otherwise); applyTheme()/moveThemeThumb() (JS,
+           near the basemap thumb code) keep it in sync with whatever's
+           actually applied on load. -->
+      <div class="td-group">
+        <div class="td-group-label">Appearance</div>
+        <div class="ma-row">
+          <div class="seg2" id="themeToggle" style="flex:1 1 auto;min-width:0;">
+            <div class="seg2-thumb" id="themeThumb"></div>
+            <button type="button" class="seg2-btn active" data-theme-choice="dark">🌙 Dark</button>
+            <button type="button" class="seg2-btn" data-theme-choice="light">☀️ Light</button>
+          </div>
+          <button type="button" class="info-btn" id="themeInfoBtn" title="About dark/light mode" aria-label="About dark/light mode">i</button>
+        </div>
+      </div>
+      <hr class="td-divider">
       <div class="td-group">
         <div class="td-group-label">Map type</div>
         <div class="seg3" id="basemapToggle">
@@ -1218,6 +1340,11 @@ document.getElementById('checklistInfoBtn').addEventListener('click', () => open
 // use), so the old Crown-Land-specific name no longer described it.
 const PARCELS_VIEW_BLURB_HTML = `<div class="mrow">Queries ParcelMap BC directly for every parcel inside whatever's currently in view, and draws them on the map colour-coded by ownership type -- see the map key for what each colour means.</div><div class="mrow" style="margin-top:8px">Only looks at the area on screen right now — it doesn't run automatically as you pan or zoom, so press it again after moving to update.</div><div class="mrow" style="margin-top:8px">No exclusion rules are applied here (park, municipality, buffers, etc.) — it's a plain ownership-type query. For that further filtering, see "Shooting Spots" below.</div>`;
 document.getElementById('parcelsInfoBtn').addEventListener('click', () => openInfoModal('🗺️ View Parcels', PARCELS_VIEW_BLURB_HTML));
+
+// v103: dark/light toggle's own "i" -- same pattern as every other button
+// here, just explaining what the two states are and that the choice sticks.
+const THEME_BLURB_HTML = `<div class="mrow">Switches the app's own chrome — header, drawers, buttons, cards — between a dark theme and a light one. Dark is the default; pick Light if you'd rather have it.</div><div class="mrow" style="margin-top:8px">Only this app's interface changes — the satellite/street/topo map imagery itself always looks the same either way.</div><div class="mrow" style="margin-top:8px">Your choice is remembered in this browser for next time (unless it's private/incognito or storage is disabled, in which case it just resets to Dark on the next visit).</div>`;
+document.getElementById('themeInfoBtn').addEventListener('click', () => openInfoModal('🌙 Dark / ☀️ Light', THEME_BLURB_HTML));
 
 // v71: back to a real button (Karim asked for it back, restored to its
 // pre-v70 view-based behaviour specifically), *alongside* the automatic 2 km
@@ -1862,6 +1989,37 @@ document.querySelectorAll('.seg3-btn').forEach(btn => {
   });
 });
 moveBasemapThumb(); // set the thumb's initial position under "Satellite" on load
+
+// v103: dark/light theme toggle. The actual default/persistence decision
+// already happened once, synchronously, in the tiny inline <script> right
+// after <title> (so <html data-theme> is correct before first paint) -- this
+// is just the interactive half: click handling, saving a change, and
+// keeping the segmented control's own thumb/active-state in sync with
+// whatever's currently applied. Same seg2/seg3 thumb-math pattern as
+// moveBasemapThumb() above, kept as a separate function/storage key/class
+// rather than folded into it since the two toggles are otherwise unrelated.
+const THEME_STORAGE_KEY = "bcShootingChecker_theme_v1";
+function moveThemeThumb(){
+  const btns = Array.from(document.querySelectorAll('.seg2-btn'));
+  const current = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+  const idx = btns.findIndex(b => b.dataset.themeChoice === current);
+  const thumb = document.getElementById('themeThumb');
+  if(thumb && idx !== -1) thumb.style.transform = `translateX(calc(${idx * 100}% + ${idx * 2}px))`;
+  btns.forEach(b => b.classList.toggle('active', b.dataset.themeChoice === current));
+}
+function applyTheme(theme){
+  document.documentElement.dataset.theme = theme;
+  try{ localStorage.setItem(THEME_STORAGE_KEY, theme); }catch(e){ /* localStorage unavailable -- choice just won't persist across reloads, same fallback every other localStorage use in this file already has */ }
+  moveThemeThumb();
+}
+document.querySelectorAll('.seg2-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const choice = btn.dataset.themeChoice;
+    if(choice === document.documentElement.dataset.theme) return;
+    applyTheme(choice);
+  });
+});
+moveThemeThumb(); // sync the thumb/active-state with whatever the head script already applied
 
 // Every parcel in view (v76: "View Parcels", formerly Crown-Land-only), and
 // the further-filtered "potential spots" subset of them -- both shown on

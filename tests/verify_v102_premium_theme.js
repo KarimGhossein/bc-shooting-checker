@@ -16,6 +16,26 @@
 // style, not just presence in the stylesheet text), and every functional
 // selector every other test in this suite depends on is still there,
 // unchanged, still wired to the same ids.
+//
+// v103 update: two things this test originally asserted changed again one
+// version later, and were updated here rather than left stale (same
+// "correct forward" practice v101 applied to verify_v87/verify_v96's own
+// hardcoded assumptions) --
+//   1) dark mode shipped in v103, defaulting to dark, so the *default*
+//      (no saved localStorage choice, matching a fresh Playwright page/
+//      file:// load same as every test here) computed --accent/--red/
+//      --amber/--green/--gray/--bg tokens are now the DARK theme's values,
+//      not the light ones v102 shipped with. Light mode still exists --
+//      verify_v103_dark_mode.js asserts *both* themes' values and the
+//      toggle itself; this file only needed its already-hardcoded
+//      "whatever the page loads with by default" expectations corrected.
+//   2) v103 also moved the header title (.tb-title only) off the italic
+//      Newsreader serif this test used to require ("less fancy, more sleek
+//      and modern" -- Karim's words) back onto the app's own sans face.
+//      The .headline utility class itself, and every OTHER place that uses
+//      it (modal headings, the verdict headline), are unchanged -- so the
+//      probe-element check on .headline below is untouched; only the
+//      .tb-title-specific assertion was removed.
 const { chromium } = require('playwright');
 const { launchOpts } = require('./launch');
 const fs = require('fs');
@@ -67,7 +87,13 @@ const ROOT = path.resolve(__dirname, '..');
       probe.remove();
       return { f, style };
     })();
-    out.tbTitleFont = getComputedStyle(document.querySelector('.tb-title')).fontFamily;
+    // v103: .tb-title is no longer part of the headline/serif system (see
+    // the file-top comment) -- checked here only as "still Hanken Grotesk,
+    // still not italic", the inverse of what this used to assert.
+    out.tbTitleStyle = (() => {
+      const cs = getComputedStyle(document.querySelector('.tb-title'));
+      return { font: cs.fontFamily, style: cs.fontStyle };
+    })();
 
     // ---- every id every other test in this suite clicks/queries by id is
     // still present, unrenamed, unremoved (a CSS-only pass must never touch
@@ -122,18 +148,23 @@ const ROOT = path.resolve(__dirname, '..');
     };
   })();
 
-  const pass = results.accent === '#8A6632'
-    && results.red === '#B5463B'
-    && results.amber === '#B7832A'
-    && results.green === '#3C8A57'
-    && results.gray === '#8B928E'
-    && results.bg === '#F6F6F3'
+  // v103: dark is the default theme now, so a fresh page load (no saved
+  // localStorage choice -- exactly what this test's page.goto produces)
+  // resolves these to the DARK values. See verify_v103_dark_mode.js for the
+  // light-theme values and the toggle that switches between them.
+  const pass = results.accent === '#C9A56B'
+    && results.red === '#E0776A'
+    && results.amber === '#E0AC5C'
+    && results.green === '#6FC08A'
+    && results.gray === '#ACB2AC'
+    && results.bg === '#0E1210'
     && results.radius === '18px'
     && results.radiusPill === '999px'
     && results.bodyFont.includes('Hanken Grotesk')
     && results.headlineFont.f.includes('Newsreader')
     && results.headlineFont.style === 'italic'
-    && results.tbTitleFont.includes('Newsreader')
+    && results.tbTitleStyle.font.includes('Hanken Grotesk')
+    && results.tbTitleStyle.style !== 'italic'
     && results.allCriticalIdsPresent
     && results.clearMenuItemCount === 14
     && results.toolsDrawerOpens === true
