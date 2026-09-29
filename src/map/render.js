@@ -69,11 +69,11 @@ function renderForestServiceRoads(features, targetLayer){
   (features || []).forEach(f => {
     if(!f.geometry) return;
     const retired = !!f.properties.RETIREMENT_DATE;
-    const color = retired ? "#8f96a3" : "#c98a1f";
+    const color = retired ? MAP_PAL.fsrRetired : MAP_PAL.fsrActive;
     // bubblingMouseEvents:false -- same reasoning as every other overlay
     // layer: without it, a click here also reaches the map underneath and
     // re-selects that point as a brand-new location.
-    L.geoJSON(f, {style:{color, weight:3.5}, bubblingMouseEvents:false})
+    L.geoJSON(f, {style:{color, weight:MAP_W.road, opacity:0.95}, bubblingMouseEvents:false})
       .bindTooltip(roadPopup(f.properties), {sticky:true, direction:"top", opacity:0.97, className:"road-tooltip"})
       .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
       .addTo(targetLayer);
@@ -100,15 +100,15 @@ function renderForestServiceRoads(features, targetLayer){
 // = planned only -- authorized but nothing on the ground yet, the case that
 // used to be invisible because it only exists in FTEN, not RESULTS.
 function cutblockColor(entry){
-  if(entry.harvestEndDate || entry.closed) return "#2f9e44";
-  if(entry.disturbanceStart) return "#d13438";
-  return "#4f6f93";
+  if(entry.harvestEndDate || entry.closed) return MAP_PAL.clear;
+  if(entry.disturbanceStart) return MAP_PAL.restricted;
+  return MAP_PAL.cutPlanned;
 }
-function cutblockStyle(color){ return {color, weight:1.5, fillColor:color, fillOpacity:0.32}; }
+function cutblockStyle(color){ return {color, weight:MAP_W.line, fillColor:color, fillOpacity:MAP_FILL.area}; } // v108: fill 0.32 -> 0.12 (see src/config/mapstyle.js)
 // v76: the highlighted variant used while a cutblock's own report-card list
 // row is hovered -- same colour, just heavier/more opaque so the shape reads
 // as "this one" against the rest of the drawn cutblocks around it.
-function cutblockHighlightStyle(color){ return {color, weight:4, fillColor:color, fillOpacity:0.65}; }
+function cutblockHighlightStyle(color){ return {color, weight:3, fillColor:color, fillOpacity:0.3}; }
 
 // The single-click location report's own map-drawing pass: takes every
 // layer's query result for the picked point and draws whichever of them
@@ -171,7 +171,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
       // the note on parcelR just below for the full story (v79 added this,
       // v80 removed it as the wrong fix, v81 restores it alongside the
       // actual fix).
-      L.geoJSON(f, {style:{color, weight:1, fillColor:color, fillOpacity:0.07, opacity:0.55}, bubblingMouseEvents:false})
+      L.geoJSON(f, {style:{color, weight:MAP_W.hair, fillColor:color, fillOpacity:MAP_FILL.faint, opacity:0.55} /* v108: < 0.62 casing threshold -- context parcels stay quiet */, bubblingMouseEvents:false})
         .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
         .addTo(overlayCategoryLayers.parcel);
       pushClickable(f.geometry, '🗺️', `Parcel (nearby) — ${esc(p.OWNER_TYPE || "Unknown owner type")}`, '🗺️ Parcel', parcelPopup(p));
@@ -211,7 +211,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     parcelR.features.forEach((f, i) => {
       const cat = ownerCategory(f.properties.OWNER_TYPE);
       const color = OWNER_COLORS[cat] || OWNER_COLORS.other;
-      const gl = L.geoJSON(f, {style:{color, weight:2, fillColor:color, fillOpacity: i === 0 ? 0.22 : 0.1}, bubblingMouseEvents:false})
+      const gl = L.geoJSON(f, {style:{color, weight:MAP_W.strong, fillColor:color, fillOpacity: i === 0 ? MAP_FILL.emphasis : MAP_FILL.faint}, bubblingMouseEvents:false})
         .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
         .addTo(overlayCategoryLayers.parcel);
       pushClickable(f.geometry, '🗺️', `Parcel — ${esc(f.properties.OWNER_TYPE || "Unknown owner type")}`, '🗺️ Parcel', parcelPopup(f.properties));
@@ -247,7 +247,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
   if(tenureR && tenureR.ok && tenureR.features.length){
     currentPushSource = 'overlay:tenures';
     tenureR.features.forEach(f => {
-      L.geoJSON(f, {style:{color:"#0086b3", weight:2, dashArray:"2 4", fillOpacity:0.03}, bubblingMouseEvents:false})
+      L.geoJSON(f, {style:{color:MAP_PAL.tenure, weight:MAP_W.line, opacity:0.9, fillColor:MAP_PAL.tenure, fillOpacity:MAP_FILL.hit}, bubblingMouseEvents:false})
         .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
         .addTo(overlayCategoryLayers.tenures);
       pushClickable(f.geometry, '📜', `Crown tenure — ${esc(f.properties.TENURE_PURPOSE || "purpose not on file")}`, '📜 Crown land tenure', tenurePopup(f.properties));
@@ -257,7 +257,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
   if(woodlotR && woodlotR.ok && woodlotR.features.length){
     currentPushSource = 'overlay:woodlot';
     woodlotR.features.forEach(f => {
-      L.geoJSON(f, {style:{color:"#6b7d1f", weight:2, dashArray:"1 6", fillOpacity:0.03}, bubblingMouseEvents:false})
+      L.geoJSON(f, {style:{color:MAP_PAL.woodlot, weight:MAP_W.line, opacity:0.9, fillColor:MAP_PAL.woodlot, fillOpacity:MAP_FILL.hit}, bubblingMouseEvents:false})
         .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
         .addTo(overlayCategoryLayers.woodlot);
       pushClickable(f.geometry, '🪓', `Forest tenure licence — ${esc(f.properties.CLIENT_NAME || f.properties.ML_TYPE_CODE || "—")}`, '🪓 Forest tenure licence', woodlotPopup(f.properties));
@@ -271,7 +271,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
   if(wmaR && wmaR.ok && wmaR.features.length){
     currentPushSource = 'overlay:wma';
     wmaR.features.forEach(f => {
-      L.geoJSON(f, {style:{color:"#b8621b", weight:2, dashArray:"4 5", fillOpacity:0.03}, bubblingMouseEvents:false})
+      L.geoJSON(f, {style:{color:MAP_PAL.wma, weight:MAP_W.line, dashArray:MAP_DASH, fillColor:MAP_PAL.wma, fillOpacity:MAP_FILL.hit}, bubblingMouseEvents:false})
         .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
         .addTo(overlayCategoryLayers.wma);
       pushClickable(f.geometry, '🦌', `Wildlife Management Area — ${esc(f.properties.WILDLIFE_MANAGEMENT_AREA_NAME || "—")}`, '🦌 Wildlife Management Area', wmaPopup(f.properties));
@@ -285,7 +285,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     // reason as tenure/woodlot/WMA above -- municipality had the identical
     // "clickable interior isn't actually clickable" gap.
     const f = muniR.features[0];
-    L.geoJSON(f, {style:{color:"#7b3fa0", weight:2, dashArray:"6 5", fillOpacity:0.03}, bubblingMouseEvents:false})
+    L.geoJSON(f, {style:{color:MAP_PAL.municipal, weight:MAP_W.line, dashArray:MAP_DASH, fillColor:MAP_PAL.municipal, fillOpacity:MAP_FILL.hit}, bubblingMouseEvents:false})
       .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
       .addTo(overlayCategoryLayers.municipality);
     pushClickable(f.geometry, '🏙️', `Municipal boundary — ${esc(f.properties.ADMIN_AREA_NAME || "—")}`, '🏙️ Municipal boundary', muniPopup(f.properties));
@@ -300,7 +300,7 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     // (a tenure inside a park, say) purely by z-order/opacity, the same
     // class of "big shape silently wins" problem parcel had.
     const f = parkR.features[0];
-    const gl = L.geoJSON(f, {style:{color:"#0f8a5f", weight:2, fillColor:"#0f8a5f", fillOpacity:0.25}, bubblingMouseEvents:false})
+    const gl = L.geoJSON(f, {style:{color:MAP_PAL.park, weight:MAP_W.line, fillColor:MAP_PAL.park, fillOpacity:MAP_FILL.area}, bubblingMouseEvents:false})
       .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
       .addTo(overlayCategoryLayers.park);
     pushClickable(f.geometry, '🌲', `Park / protected area — ${esc(f.properties.PROTECTED_LANDS_NAME || "—")}`, '🌲 Park / protected area', parkPopup(f.properties));
@@ -351,25 +351,25 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     currentPushSource = 'overlay:recreation';
     recList.forEach(entry => {
       if(!entry.geometry) return;
-      const color = "#c2255c";
+      const color = MAP_PAL.recreation;
       const nameLabel = esc(entry.name || "Unnamed recreation feature");
       if(entry.kind === "site"){
         // Points -- rec sites/campsites -- as a small filled circle marker,
         // not a full geoJSON layer, since a point has no shape to style.
         const coords = entry.geometry.coordinates;
         if(!coords || coords.length < 2) return;
-        L.circleMarker([coords[1], coords[0]], {radius:6, color, weight:2, fillColor:color, fillOpacity:0.65, bubblingMouseEvents:false})
+        L.circleMarker([coords[1], coords[0]], {radius:5, color:"#F1F2EE", weight:1.5, fillColor:color, fillOpacity:0.95, bubblingMouseEvents:false})
           .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
           .addTo(overlayCategoryLayers.recreation);
         pushClickable(entry.geometry, '🏕️', `Recreation site — ${nameLabel}`, `🏕️ ${nameLabel}`, recreationPopup(entry));
       } else if(entry.kind === "trail"){
-        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:2.5, dashArray:"3 5"}, bubblingMouseEvents:false})
+        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:2, opacity:0.95}, bubblingMouseEvents:false})
           .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
           .addTo(overlayCategoryLayers.recreation);
         pushClickable(entry.geometry, '🏕️', `Recreation trail — ${nameLabel}`, `🏕️ ${nameLabel}`, recreationPopup(entry));
       } else {
         // "area" -- recreation reserve/area polygons
-        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:2, fillColor:color, fillOpacity:0.18}, bubblingMouseEvents:false})
+        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:MAP_W.line, fillColor:color, fillOpacity:MAP_FILL.area}, bubblingMouseEvents:false})
           .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
           .addTo(overlayCategoryLayers.recreation);
         pushClickable(entry.geometry, '🏕️', `Recreation reserve/area — ${nameLabel}`, `🏕️ ${nameLabel}`, recreationPopup(entry));
@@ -387,16 +387,16 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     // read as solidly opaque as a park.
     mvprList.forEach(entry => {
       if(!entry.geometry) return;
-      const color = entry.closed ? "#c0392b" : "#6b7d1f";
+      const color = entry.closed ? MAP_PAL.restricted : MAP_PAL.clear;
       const nameLabel = esc(entry.geographicName || "Motor Vehicle Prohibition");
       const rowLabel = `${entry.kind === "route" ? "Motor vehicle route restriction" : "Motor vehicle closed area"} — ${nameLabel}`;
       if(entry.kind === "route"){
-        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:3, dashArray: entry.closed ? null : "2 4"}, bubblingMouseEvents:false})
+        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:MAP_W.strong, dashArray: entry.closed ? null : MAP_DASH}, bubblingMouseEvents:false})
           .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
           .addTo(overlayCategoryLayers.mvpr);
       } else {
         // "area" -- always closed (see buildMvprList's comment)
-        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:2, dashArray:"6 4", fillColor:color, fillOpacity:0.12}, bubblingMouseEvents:false})
+        L.geoJSON({type:"Feature", geometry:entry.geometry, properties:{}}, {style:{color, weight:MAP_W.line, dashArray:MAP_DASH, fillColor:color, fillOpacity:MAP_FILL.area}, bubblingMouseEvents:false})
           .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
           .addTo(overlayCategoryLayers.mvpr);
       }
@@ -494,7 +494,7 @@ function activeCutblockPopup(props){
     <b>🪓 Active cutblock (FTEN)</b><br>
     Block: ${esc(cutblockFeatureLabel(props))}<br>
     Life Cycle: <b>ACTIVE</b> — approved; activities may be taking place<br>
-    <span style="color:#6b7380;font-size:11px">Its ${CUTBLOCK_WARN_DISTANCE_M}m buffer zone is shaded on the map too -- any spot inside it should be treated as "close to active logging."</span>
+    <span style="color:var(--muted);font-size:11px">Its ${CUTBLOCK_WARN_DISTANCE_M}m buffer zone is shaded on the map too -- any spot inside it should be treated as "close to active logging."</span>
   </div>`;
 }
 function renderActiveCutblockOutlines(activeCuts, targetLayer){
@@ -522,7 +522,7 @@ function bboxToBoundsLike(bbox){
   };
 }
 function cutblockBufferStyle(){
-  return {color: CUTBLOCK_WARN_COLOR, weight: 0, fillColor: CUTBLOCK_WARN_COLOR, fillOpacity: 0.20}; // v52: back down from 0.5 (v51) -- Karim asked for the buffer fill lighter now that the real outline (above) is fully solid and does the heavy lifting of standing out
+  return {color: CUTBLOCK_WARN_COLOR, weight: 0, fillColor: CUTBLOCK_WARN_COLOR, fillOpacity: MAP_FILL.emphasis}; // v108: 0.20 -> 0.18, in line with the shared fill scale; // v52: back down from 0.5 (v51) -- Karim asked for the buffer fill lighter now that the real outline (above) is fully solid and does the heavy lifting of standing out
 }
 // v54: Karim asked for a solid line around the outer edge of the 400m buffer
 // zone itself (distinct from the cutblock's own dashed outline above -- that
@@ -531,7 +531,7 @@ function cutblockBufferStyle(){
 // deliberately different look from the dashed real outline so the two are
 // never confused for each other.
 function cutblockBufferOutlineStyle(){
-  return {color: CUTBLOCK_WARN_COLOR, weight: 2, opacity: 1};
+  return {color: CUTBLOCK_WARN_COLOR, weight: MAP_W.line, opacity: 1};
 }
 // Offsets a grid point by exactly one grid spacing in one of the four
 // cardinal directions -- used to test "is the square next to this one, in
@@ -624,12 +624,12 @@ function renderActiveCutblockBuffers(activeCuts, targetLayer){
 // interactive:false-free geoJSON (bubblingMouseEvents:false, same as every
 // other clickable Potential Spots shape) so hovering/clicking one doesn't
 // also re-select that point as the map's main location.
-const DRA_ROAD_COLOR = "#546e7a"; // slate -- distinct from every other line/fill color already in use (forest-service road tan/gray, tenure blue, cutblock red, park teal)
-const DRA_ROAD_SPECIAL_COLOR = "#b1440e"; // warm rust -- flags a listed major highway's wider 400/600m buffer at a glance
+const DRA_ROAD_COLOR = MAP_PAL.roadPublic; // v108: was #546e7a, now from the shared palette -- // slate -- distinct from every other line/fill color already in use (forest-service road tan/gray, tenure blue, cutblock red, park teal)
+const DRA_ROAD_SPECIAL_COLOR = MAP_PAL.roadHighway; // v108: was #b1440e -- // warm rust -- flags a listed major highway's wider 400/600m buffer at a glance
 function draRoadStyle(special){
   return special
-    ? {color: DRA_ROAD_SPECIAL_COLOR, weight: 3, opacity: 0.9}
-    : {color: DRA_ROAD_COLOR, weight: 2, opacity: 0.7};
+    ? {color: DRA_ROAD_SPECIAL_COLOR, weight: MAP_W.road, opacity: 0.95}
+    : {color: DRA_ROAD_COLOR, weight: 1.75, opacity: 0.85};
 }
 function draRoadTooltip(props, special, bufferM){
   const cls = (props && props.ROAD_CLASS) ? esc(props.ROAD_CLASS) : "Road";

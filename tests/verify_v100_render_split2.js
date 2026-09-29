@@ -87,6 +87,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.squareEdgeSegmentType = typeof squareEdgeSegment;
     out.draRoadStyleType = typeof draRoadStyle;
     out.draRoadTooltipType = typeof draRoadTooltip;
+    out.pal = MAP_PAL; out.fill = MAP_FILL; out.w = MAP_W;
     out.draRoadColor = DRA_ROAD_COLOR;
     out.draRoadSpecialColor = DRA_ROAD_SPECIAL_COLOR;
     out.spotMinZoom = SPOT_MIN_ZOOM;
@@ -220,8 +221,8 @@ const ROOT = path.resolve(__dirname, '..');
     && results.squareEdgeSegmentType === 'function'
     && results.draRoadStyleType === 'function'
     && results.draRoadTooltipType === 'function'
-    && results.draRoadColor === '#546e7a'
-    && results.draRoadSpecialColor === '#b1440e'
+    && results.draRoadColor === results.pal.roadPublic // v108: colours now come from MAP_PAL
+    && results.draRoadSpecialColor === results.pal.roadHighway
     && results.spotMinZoom === 9
     && results.infraMinZoom === 12
     && results.startSpotsProgressType === 'function'
@@ -229,8 +230,8 @@ const ROOT = path.resolve(__dirname, '..');
     && results.endSpotsProgressType === 'function'
     && results.spotSeqType === 'number'
     && results.bboxToBoundsLikeOk === true
-    && results.cutblockBufferStyleSample.fillOpacity === 0.20
-    && results.cutblockBufferOutlineStyleSample.weight === 2
+    && results.cutblockBufferStyleSample.fillOpacity === results.fill.emphasis // v108: was 0.20
+    && results.cutblockBufferOutlineStyleSample.weight === results.w.line // v108: was 2
     && results.neighborPointMoved === true
     && results.squareEdgeSegmentType2 === 'LineString'
     && results.activeCutblockPopupHasText === true

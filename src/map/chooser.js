@@ -168,7 +168,7 @@ function openNearbyFeaturesPopupAt(latlng){
     const rows = matches.map((m, i) => `<div class="field clickable" onclick="showNearbyFeatureDetail(${i})" onmouseover="highlightNearbyMatch(${i})" onmouseout="clearNearbyMatchHighlight()"><span class="chev">details ›</span>${m.icon} ${m.rowLabel}</div>`).join('');
     html = `<div style="font-size:12.5px;line-height:1.7;min-width:220px">
       <b>${matches.length} records here</b><br>
-      <span style="color:#6b7380">These overlap or sit right at this point on the map -- pick one below for its full details.</span>
+      <span style="color:var(--muted)">These overlap or sit right at this point on the map -- pick one below for its full details.</span>
       ${rows}
     </div>`;
   }

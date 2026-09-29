@@ -59,6 +59,7 @@ const ROOT = path.resolve(__dirname, '..');
 
     // Functional checks: cutblockColor/cutblockStyle/cutblockHighlightStyle
     // are pure and easy to exercise directly.
+    out.pal = MAP_PAL; out.fill = MAP_FILL;
     out.colorClosed = cutblockColor({closed: true});
     out.colorActive = cutblockColor({disturbanceStart: '2020-01-01'});
     out.colorPlanned = cutblockColor({});
@@ -145,11 +146,11 @@ const ROOT = path.resolve(__dirname, '..');
     && results.cutblockColorType === 'function'
     && results.cutblockStyleType === 'function'
     && results.cutblockHighlightStyleType === 'function'
-    && results.colorClosed === '#2f9e44'
-    && results.colorActive === '#d13438'
-    && results.colorPlanned === '#4f6f93'
-    && results.styleSample.fillOpacity === 0.32
-    && results.highlightStyleSample.weight === 4
+    && results.colorClosed === results.pal.clear // v108: colours now come from MAP_PAL (src/config/mapstyle.js)
+    && results.colorActive === results.pal.restricted
+    && results.colorPlanned === results.pal.cutPlanned
+    && results.styleSample.fillOpacity === results.fill.area // v108: was 0.32
+    && results.highlightStyleSample.weight === 3 // v108: was 4
     && results.renderThrew === false
     && results.chooserRegisteredParcel === true
     && results.chooserIdx !== -1 && results.renderIdx !== -1

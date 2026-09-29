@@ -276,6 +276,49 @@
   #map{position:absolute;inset:0;}
   .leaflet-container{font-family:inherit;}
 
+  /* ---------- v108: map overlay finish (see src/config/mapstyle.js) ----------
+     Casing: every overlay line gets a thin dark outline so muted colours stay
+     crisp on busy imagery -- the onX/Gaia-style treatment -- via the SVG
+     filters in #kageMapFilters (bottom of <body>), applied to the one <g>
+     Leaflet draws every vector overlay into. The filter keeps only near-solid
+     pixels (alpha >= 0.62: lines and outlines), grows them 1px, and paints
+     that UNDER the original -- dark on satellite; on the pale street/topo
+     basemaps a soft white halo instead (a dark outline there made every line
+     read heavy and doubled; lines already contrast with a light map). Translucent fills (all <= 0.24, and still
+     < 0.62 where three overlap) fall below the threshold, so their interiors
+     are left untouched. (A first pass used CSS drop-shadow instead; that
+     shadow showed through every translucent fill and greyed out all the
+     shapes on the light street map.) Off during zoom animation so zooming stays
+     smooth. */
+  #map .leaflet-overlay-pane svg > g{filter:url(#kage-casing-sat);}
+  #map[data-base="street"] .leaflet-overlay-pane svg > g,
+  #map[data-base="topo"] .leaflet-overlay-pane svg > g{filter:url(#kage-casing-light);}
+  #map.leaflet-zoom-anim .leaflet-overlay-pane svg > g{filter:none;}
+  #map .leaflet-interactive{transition:stroke-width .12s ease, fill-opacity .12s ease;}
+  /* KAGE location pin (see KAGE_PIN_ICON) */
+  .kage-pin{display:flex;align-items:center;justify-content:center;cursor:grab;}
+  .kage-pin:active{cursor:grabbing;}
+  .kage-pin-core{position:relative;width:16px;height:16px;border-radius:50%;background:#101513;border:2.5px solid #F1F2EE;box-shadow:0 0 0 6px rgba(201,165,107,.30),0 2px 8px rgba(0,0,0,.55);box-sizing:content-box;}
+  .kage-pin-dot{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#C9A56B;}
+  /* Popups and tooltips follow the app theme instead of Leaflet's fixed white */
+  #map .leaflet-popup-content-wrapper{background:var(--surface);color:var(--body-ink);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);}
+  #map .leaflet-popup-tip{background:var(--surface);box-shadow:none;}
+  #map a.leaflet-popup-close-button{color:var(--muted);}
+  #map a.leaflet-popup-close-button:hover{color:var(--ink);}
+  #map .leaflet-tooltip{background:var(--surface);color:var(--body-ink);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);}
+  #map .leaflet-tooltip-top:before{border-top-color:var(--surface);}
+  #map .leaflet-tooltip-bottom:before{border-bottom-color:var(--surface);}
+  #map .leaflet-tooltip-left:before{border-left-color:var(--surface);}
+  #map .leaflet-tooltip-right:before{border-right-color:var(--surface);}
+  /* v108: zoom buttons and attribution strip follow the theme too (they were
+     Leaflet's fixed white, the last stock chrome left on the map) */
+  #map .leaflet-bar{border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;}
+  #map .leaflet-bar a{background:var(--menu-bg);color:var(--ink);border-bottom-color:var(--border);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+  #map .leaflet-bar a:hover{background:var(--surface);color:var(--ink);}
+  #map .leaflet-bar a.leaflet-disabled{color:var(--muted);background:var(--menu-bg);}
+  #map .leaflet-control-attribution{background:color-mix(in srgb, var(--surface) 72%, transparent);color:var(--muted);border-top-left-radius:8px;}
+  #map .leaflet-control-attribution a{color:var(--accent-ink);}
+
   /* v75: header redesigned around one centred search bar -- see .tb-search-wrap
      below. .top-bar is the positioning context (position:fixed already makes
      it a containing block for absolutely-positioned children, no extra
@@ -679,7 +722,7 @@
   .lg-body.open{display:block;max-height:calc(100vh - var(--tb-h) - 110px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px;}
   .map-legend .lg-row{display:flex;align-items:center;gap:7px;margin:2px 0;}
   .map-legend .sw{width:12px;height:12px;border-radius:3px;flex:0 0 auto;border:1px solid var(--swatch-border);}
-  .map-legend .sw.line{width:16px;height:0;border-radius:0;border:none;border-top:3px dashed;background:none;}
+  .map-legend .sw.line{width:16px;height:0;border-radius:0;border:none;border-top:2.5px dashed;background:none;}
   /* v72: a smaller variant of .info-btn (19px is too big to sit comfortably
      at the end of an 11.5px legend row) -- reuses the same look/behaviour
      (same class list, .info-btn.lg-i), just tighter, and pinned to the row's
@@ -971,34 +1014,34 @@
         <button type="button" class="info-btn lg-i" data-info="legendUsage" title="How to use this map key" aria-label="How to use this map key">i</button>
       </div>
       <div class="lg-body" id="legendBody">
-        <div class="lg-row"><span class="sw" style="background:#c0392b"></span> Private parcel</div>
-        <div class="lg-row"><span class="sw" style="background:#1c7d43"></span> Crown provincial parcel <button type="button" class="info-btn lg-i" data-info="crownParcel" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw" style="background:#c9a227"></span> Untitled provincial parcel</div>
-        <div class="lg-row"><span class="sw" style="background:#a8650a"></span> Crown federal parcel</div>
-        <div class="lg-row"><span class="sw" style="background:#7b3fa0"></span> Municipal parcel</div>
-        <div class="lg-row"><span class="sw" style="background:#1b4b9c"></span> First Nations parcel</div>
-        <div class="lg-row"><span class="sw line" style="border-color:#7b3fa0"></span> Municipal boundary</div>
-        <div class="lg-row"><span class="sw" style="background:#0f8a5f"></span> Park / protected area</div>
-        <div class="lg-row"><span class="sw" style="background:#2f9e44"></span> Cutblock — closed out <button type="button" class="info-btn lg-i" data-info="cutblockColours" title="More about cutblock colours">i</button></div>
-        <div class="lg-row"><span class="sw" style="background:#d13438"></span> Cutblock — not closed out</div>
-        <div class="lg-row"><span class="sw" style="background:#4f6f93"></span> Cutblock — planned</div>
-        <div class="lg-row"><span class="sw line" style="border-color:#0086b3;border-style:dotted"></span> Crown land tenure</div>
-        <div class="lg-row"><span class="sw line" style="border-color:#6b7d1f;border-style:dotted"></span> Woodlot / forest licence</div>
-        <div class="lg-row"><span class="sw line" style="border-color:#b8621b;border-style:dashed"></span> Wildlife Management Area <button type="button" class="info-btn lg-i" data-info="wma" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#c98a1f;border-style:solid"></span> Forest service road (active)</div>
-        <div class="lg-row"><span class="sw line" style="border-color:#8f96a3;border-style:solid"></span> Forest service road (retired)</div>
-        <div class="lg-row"><span class="sw" style="background:#c2255c;border-radius:50%"></span> Recreation site <button type="button" class="info-btn lg-i" data-info="recreation" title="More about recreation data">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#c2255c;border-style:dashed"></span> Recreation trail</div>
-        <div class="lg-row"><span class="sw" style="background:#c2255c;opacity:.5"></span> Recreation reserve / area</div>
-        <div class="lg-row"><span class="sw" style="background:#0aa6a6"></span> Potential shooting spot <button type="button" class="info-btn lg-i" data-info="potentialSpot" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw" style="background:#8a5cf5"></span> Gap spot (presumed Crown) <button type="button" class="info-btn lg-i" data-info="gapSpot" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw" style="background:#c0392b"></span> Restricted (reason on click) <button type="button" class="info-btn lg-i" data-info="restricted" title="More about restricted areas & buffers">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#546e7a;border-style:solid"></span> Side road (public) <button type="button" class="info-btn lg-i" data-info="sideRoadPublic" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#b1440e;border-style:solid"></span> Side road — major highway <button type="button" class="info-btn lg-i" data-info="sideRoadHighway" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#d13438;border-style:dashed"></span> Active cutblock outline <button type="button" class="info-btn lg-i" data-info="activeCutOutline" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw" style="background:#d13438;opacity:.2;border:2px solid #d13438"></span> Active cutblock buffer zone <button type="button" class="info-btn lg-i" data-info="activeCutBuffer" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#c0392b;border-style:solid"></span> Motor vehicle closure <button type="button" class="info-btn lg-i" data-info="motorVehicle" title="More about this">i</button></div>
-        <div class="lg-row"><span class="sw line" style="border-color:#6b7d1f;border-style:dashed"></span> Motor vehicle route — open</div>
+        <div class="lg-row"><span class="sw" style="background:#E2685A"></span> Private parcel</div>
+        <div class="lg-row"><span class="sw" style="background:#45A872"></span> Crown provincial parcel <button type="button" class="info-btn lg-i" data-info="crownParcel" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw" style="background:#D9A441"></span> Untitled provincial parcel</div>
+        <div class="lg-row"><span class="sw" style="background:#AE8660"></span> Crown federal parcel</div>
+        <div class="lg-row"><span class="sw" style="background:#B874B8"></span> Municipal parcel</div>
+        <div class="lg-row"><span class="sw" style="background:#6A86D8"></span> First Nations parcel</div>
+        <div class="lg-row"><span class="sw line" style="border-color:#B874B8;border-style:dashed"></span> Municipal boundary</div>
+        <div class="lg-row"><span class="sw" style="background:#2EA58B"></span> Park / protected area</div>
+        <div class="lg-row"><span class="sw" style="background:#45A872"></span> Cutblock — closed out <button type="button" class="info-btn lg-i" data-info="cutblockColours" title="More about cutblock colours">i</button></div>
+        <div class="lg-row"><span class="sw" style="background:#E2685A"></span> Cutblock — not closed out</div>
+        <div class="lg-row"><span class="sw" style="background:#93A6BC"></span> Cutblock — planned</div>
+        <div class="lg-row"><span class="sw line" style="border-color:#4FA0CC;border-style:solid"></span> Crown land tenure</div>
+        <div class="lg-row"><span class="sw line" style="border-color:#9BA84F;border-style:solid"></span> Woodlot / forest licence</div>
+        <div class="lg-row"><span class="sw line" style="border-color:#C4A52A;border-style:dashed"></span> Wildlife Management Area <button type="button" class="info-btn lg-i" data-info="wma" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#D8A755;border-style:solid"></span> Forest service road (active)</div>
+        <div class="lg-row"><span class="sw line" style="border-color:#A3957A;border-style:solid"></span> Forest service road (retired)</div>
+        <div class="lg-row"><span class="sw" style="background:#D66A9E;border-radius:50%"></span> Recreation site <button type="button" class="info-btn lg-i" data-info="recreation" title="More about recreation data">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#D66A9E;border-style:solid"></span> Recreation trail</div>
+        <div class="lg-row"><span class="sw" style="background:#D66A9E;opacity:.5"></span> Recreation reserve / area</div>
+        <div class="lg-row"><span class="sw" style="background:#2BB3C4"></span> Potential shooting spot <button type="button" class="info-btn lg-i" data-info="potentialSpot" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw" style="background:#8E7DE3"></span> Gap spot (presumed Crown) <button type="button" class="info-btn lg-i" data-info="gapSpot" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw" style="background:#E2685A"></span> Restricted (reason on click) <button type="button" class="info-btn lg-i" data-info="restricted" title="More about restricted areas & buffers">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#9DA9B3;border-style:solid"></span> Side road (public) <button type="button" class="info-btn lg-i" data-info="sideRoadPublic" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#D9733A;border-style:solid"></span> Side road — major highway <button type="button" class="info-btn lg-i" data-info="sideRoadHighway" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Active cutblock outline <button type="button" class="info-btn lg-i" data-info="activeCutOutline" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw" style="background:rgba(226,104,90,.2);border:1.5px solid #E2685A"></span> Active cutblock buffer zone <button type="button" class="info-btn lg-i" data-info="activeCutBuffer" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Motor vehicle closure <button type="button" class="info-btn lg-i" data-info="motorVehicle" title="More about this">i</button></div>
+        <div class="lg-row"><span class="sw line" style="border-color:#45A872;border-style:dashed"></span> Motor vehicle route — open</div>
       </div>
     </div>
   </div>
@@ -1250,6 +1293,7 @@
 <script src="src/config/constants.js"></script>
 <script src="src/config/layers.js"></script>
 <script src="src/config/icons.js"></script>
+<script src="src/config/mapstyle.js"></script>
 <script src="src/data/wfs.js"></script>
 <script src="src/map/chooser.js"></script>
 <script src="src/map/render.js"></script>
@@ -2063,6 +2107,7 @@ function disableMapboxAndFallback(noteText){
 
 let currentBase = 'satellite';
 BASE_LAYERS[currentBase].addTo(map);
+document.getElementById('map').dataset.base = currentBase; // v108
 // v75: .bm-btn -> .seg3-btn (three-way segmented slider in the tools drawer,
 // replacing three independent floating buttons over the map -- see .seg3 in
 // the CSS). moveBasemapThumb() slides .seg3-thumb under whichever button is
@@ -2082,6 +2127,7 @@ document.querySelectorAll('.seg3-btn').forEach(btn => {
     map.removeLayer(BASE_LAYERS[currentBase]);
     currentBase = key;
     BASE_LAYERS[currentBase].addTo(map);
+    document.getElementById('map').dataset.base = currentBase; // v108: drives the overlay casing strength in CSS
     document.querySelectorAll('.seg3-btn').forEach(b => b.classList.toggle('active', b.dataset.base === key));
     moveBasemapThumb();
     restyleParcelViewLayer(); // re-tint already-loaded parcels for the new basemap's contrast, no re-query needed
@@ -2181,7 +2227,7 @@ let currentCutOpenings = [];
 // layer again on mouseout -- looks the same regardless of the underlying
 // feature's own style, and there's nothing to get wrong reverting it.
 const chooserHighlightLayer = L.layerGroup().addTo(map);
-const CHOOSER_HIGHLIGHT_STYLE = {color:'#ffdd57', weight:5, opacity:0.95, fillColor:'#ffdd57', fillOpacity:0.25, interactive:false};
+const CHOOSER_HIGHLIGHT_STYLE = {color:MAP_PAL.selection, weight:3.5, opacity:1, fillColor:MAP_PAL.selection, fillOpacity:0.16, interactive:false}; // v108: KAGE bronze replaces highlighter yellow
 function highlightNearbyMatch(i){
   const m = currentNearbyMatches[i];
   chooserHighlightLayer.clearLayers();
@@ -2609,9 +2655,15 @@ document.getElementById('markupImportFile').addEventListener('change', e => {
 // itself already suppresses the map's click handler from firing at drag-end
 // (long-standing Leaflet behaviour, not something this app has to guard
 // against) -- so dragging never re-triggers the v33 bug either.
+// v108: KAGE location pin replacing Leaflet's stock blue teardrop. A
+// centred target (dark core, light ring, bronze centre dot, soft bronze
+// halo) rather than a teardrop: it marks the exact point under test, which
+// is the whole job here. className replaces Leaflet's default
+// "leaflet-div-icon" (which would add a white box behind it).
+const KAGE_PIN_ICON = L.divIcon({className:'kage-pin', html:'<span class="kage-pin-core"><span class="kage-pin-dot"></span></span>', iconSize:[28,28], iconAnchor:[14,14]});
 function setMarker(lat,lng){
   if(marker) map.removeLayer(marker);
-  marker = L.marker([lat,lng], {draggable:true, title:"Drag to move this location"}).addTo(map);
+  marker = L.marker([lat,lng], {draggable:true, title:"Drag to move this location", icon: KAGE_PIN_ICON}).addTo(map);
   marker.on('dragend', () => {
     const pos = marker.getLatLng();
     runLookup(pos.lat, pos.lng);
@@ -2843,15 +2895,18 @@ function esc(s){
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
+// v108: same categories and meanings, colours now from the shared map
+// palette (src/config/mapstyle.js) -- private reuses the legality red and
+// Crown provincial the legality green, since that's exactly what they signal.
 const OWNER_COLORS = {
-  "private": "#c0392b",
-  "crown-federal": "#a8650a",
-  "crown-provincial": "#1c7d43",
-  "untitled-provincial": "#c9a227",
-  "municipal": "#7b3fa0",
-  "first-nation": "#1b4b9c",
-  "other": "#5b6570",
-  "unknown": "#5b6570"
+  "private": MAP_PAL.restricted,
+  "crown-federal": MAP_PAL.federal,
+  "crown-provincial": MAP_PAL.clear,
+  "untitled-provincial": MAP_PAL.caution,
+  "municipal": MAP_PAL.municipal,
+  "first-nation": MAP_PAL.firstNation,
+  "other": MAP_PAL.nodata,
+  "unknown": MAP_PAL.nodata
 };
 
 // NOTE on cutblock colouring: BC's public docs for RESULTS don't give us a
@@ -3282,10 +3337,10 @@ function cutblockPopup(entry){
   const idLabel = entry.openingId != null ? `Opening ${esc(entry.openingId)}` : (entry.cutBlockId ? `Cut block ${esc(entry.cutBlockId)}` : "Cutblock");
   const rows = [];
   const phaseMeaning = statusCodeLabel(entry.statusLabel);
-  rows.push(`Logging phase: <b>${esc(entry.statusLabel || "?")}</b>${phaseMeaning ? ` <span style="color:#6b7380">— ${esc(phaseMeaning)}</span>` : ''}`);
+  rows.push(`Logging phase: <b>${esc(entry.statusLabel || "?")}</b>${phaseMeaning ? ` <span style="color:var(--muted)">— ${esc(phaseMeaning)}</span>` : ''}`);
   if(entry.lifeCycleStatus){
     const lifeCycleMeaning = lifeCycleLabel(entry.lifeCycleStatus);
-    rows.push(`Life Cycle: <b>${esc(entry.lifeCycleStatus)}</b>${lifeCycleMeaning ? ` <span style="color:#6b7380">— ${esc(lifeCycleMeaning)}</span>` : ''}`);
+    rows.push(`Life Cycle: <b>${esc(entry.lifeCycleStatus)}</b>${lifeCycleMeaning ? ` <span style="color:var(--muted)">— ${esc(lifeCycleMeaning)}</span>` : ''}`);
   }
   rows.push(`Planned harvest date: <b>${fmtDateOrUnknown(entry.plannedHarvestDate)}</b>`);
   rows.push(`Start date: <b>${fmtDateOrUnknown(entry.disturbanceStart)}</b>`);
@@ -3361,7 +3416,7 @@ function wmaPopup(props){
   return `<div style="font-size:12.5px;line-height:1.6;min-width:190px">
     <b>${esc(props.WILDLIFE_MANAGEMENT_AREA_NAME || "Wildlife Management Area")}</b><br>
     Wildlife Management Area (Wildlife Act, B.C. Reg 161/87)<br>
-    <span style="color:#6b7380">Some WMAs carry their own gazetted access or discharge restrictions -- this overlap doesn't by itself mean shooting is banned, but check the Order in Council for this specific WMA before relying on it.</span>
+    <span style="color:var(--muted)">Some WMAs carry their own gazetted access or discharge restrictions -- this overlap doesn't by itself mean shooting is banned, but check the Order in Council for this specific WMA before relying on it.</span>
   </div>`;
 }
 function tenurePopup(props){
@@ -3384,7 +3439,7 @@ function tenurePopup(props){
     Type: ${esc(props.TENURE_TYPE || "—")} · Stage: ${esc(props.TENURE_STAGE || "—")}<br>
     Status: <b>${esc(props.TENURE_STATUS || "—")}</b><br>
     File: ${esc(props.CROWN_LANDS_FILE || "—")}${props.TENURE_EXPIRY ? " · expires " + fmtDate(props.TENURE_EXPIRY) : ""}<br>
-    <span style="color:#6b7380">BC's open tenure data has no field for a seasonal closure/operating-period (e.g. a heli-ski tenure closed to others Dec–Apr) -- it isn't published as open data, only in this tenure's own licence document${likelySeasonal ? ". This purpose is the kind that often carries one -- confirm with FrontCounter BC or the tenure holder before relying on this point being clear." : "."}</span>
+    <span style="color:var(--muted)">BC's open tenure data has no field for a seasonal closure/operating-period (e.g. a heli-ski tenure closed to others Dec–Apr) -- it isn't published as open data, only in this tenure's own licence document${likelySeasonal ? ". This purpose is the kind that often carries one -- confirm with FrontCounter BC or the tenure holder before relying on this point being clear." : "."}</span>
   </div>`;
 }
 function woodlotPopup(props){
@@ -3404,7 +3459,7 @@ function roadPopup(props){
     Status: <b>${esc(statusLabel)}</b><br>
     Maintained by: ${esc(props.CLIENT_NAME || "—")}<br>
     Type: ${esc(props.FILE_TYPE_DESCRIPTION || "—")}<br>
-    <span style="color:#6b7380">This is the road's forest‑tenure administrative status (permit holder, retired or not) — not real‑time drivability. It won't show washouts, deactivations, snow, or gates.</span>
+    <span style="color:var(--muted)">This is the road's forest‑tenure administrative status (permit holder, retired or not) — not real‑time drivability. It won't show washouts, deactivations, snow, or gates.</span>
   </div>`;
 }
 // v99: renderForestServiceRoads() moved out to src/map/render.js, alongside
@@ -3417,7 +3472,7 @@ function recreationPopup(entry){
     if(entry.numCampsites != null) rows.push(`Campsites: <b>${esc(entry.numCampsites)}</b>`);
     if(entry.maintainStdDesc || entry.maintainStdCode) rows.push(`Maintenance standard: ${esc(entry.maintainStdDesc || entry.maintainStdCode)}`);
     if(entry.siteLocation) rows.push(`${esc(entry.siteLocation)}`);
-    rows.push(`<span style="color:#6b7380">This layer doesn't carry a lifecycle/status field, so an inactive or decommissioned site can still appear here.</span>`);
+    rows.push(`<span style="color:var(--muted)">This layer doesn't carry a lifecycle/status field, so an inactive or decommissioned site can still appear here.</span>`);
   } else {
     const kindLabel = entry.kind === "trail" ? "Recreation trail" : "Recreation reserve / area";
     rows.push(`Type: <b>${esc(entry.projectType || kindLabel)}</b>`);
@@ -3429,7 +3484,7 @@ function recreationPopup(entry){
   return `<div style="font-size:12.5px;line-height:1.7;min-width:190px">
     <b>${esc(entry.name || "Unnamed recreation feature")}</b><br>
     ${rows.join('<br>')}<br>
-    <span style="color:#6b7380">Source: Recreation Sites and Trails BC (RSTBC), via BC's Forest Tenure recreation layers. This isn't a live-usage or closure feed — a site or trail can be here whether or not it's currently maintained, busy, or officially closed.</span>
+    <span style="color:var(--muted)">Source: Recreation Sites and Trails BC (RSTBC), via BC's Forest Tenure recreation layers. This isn't a live-usage or closure feed — a site or trail can be here whether or not it's currently maintained, busy, or officially closed.</span>
   </div>`;
 }
 
@@ -3438,11 +3493,11 @@ function mvprPopup(entry){
   rows.push(`Type: <b>${esc(entry.prohibitionType || (entry.kind === "route" ? "Motor vehicle route restriction" : "Motor vehicle closed area"))}</b>`);
   if(entry.kind === "route"){
     if(entry.roadName) rows.push(`Road: <b>${esc(entry.roadName)}</b>`);
-    rows.push(`Status: <b style="color:${entry.closed ? '#c0392b' : '#1c7d43'}">${esc(entry.accessStatus || "—")}</b>`);
+    rows.push(`Status: <b style="color:${entry.closed ? 'var(--red)' : 'var(--green)'}">${esc(entry.accessStatus || "—")}</b>`);
     if(entry.accessRange) rows.push(`Dates: ${esc(entry.accessRange)}`);
     if(entry.accessLimitation && entry.accessLimitation !== "None") rows.push(`Limitation: ${esc(entry.accessLimitation)}`);
   } else {
-    rows.push(`Status: <b style="color:#c0392b">Closed</b>${entry.accessDescription ? ` — ${esc(entry.accessDescription)}` : ''}`);
+    rows.push(`Status: <b style="color:var(--red)">Closed</b>${entry.accessDescription ? ` — ${esc(entry.accessDescription)}` : ''}`);
     if(entry.accessLimitation) rows.push(`Exemption: ${esc(entry.accessLimitation)}`);
   }
   if(entry.effectiveDate) rows.push(`In effect since: ${fmtDate(entry.effectiveDate)}`);
@@ -3451,7 +3506,7 @@ function mvprPopup(entry){
   return `<div style="font-size:12.5px;line-height:1.7;min-width:210px">
     <b>${esc(entry.geographicName || "Motor Vehicle Prohibition")}</b><br>
     ${rows.join('<br>')}<br>
-    <span style="color:#6b7380">Source: BC's Wildlife Act Motor Vehicle Prohibition Regulation (WAA_MVPR). This is a legal closure/restriction, not a physical road-condition report -- it won't show washouts, deactivations, or gates left over a road that's otherwise legally open.${entry.pdfName ? ` Reference: ${esc(entry.pdfName)}.` : ''}</span>
+    <span style="color:var(--muted)">Source: BC's Wildlife Act Motor Vehicle Prohibition Regulation (WAA_MVPR). This is a legal closure/restriction, not a physical road-condition report -- it won't show washouts, deactivations, or gates left over a road that's otherwise legally open.${entry.pdfName ? ` Reference: ${esc(entry.pdfName)}.` : ''}</span>
   </div>`;
 }
 
@@ -3507,9 +3562,9 @@ function parcelViewStyle(cat){
   const color = OWNER_COLORS[cat];
   const isSat = currentBase === 'satellite';
   return {
-    color, weight: isSat ? 2.5 : 1.5,
-    opacity: isSat ? 0.95 : 0.75,
-    fillColor: color, fillOpacity: isSat ? 0.4 : 0.22
+    color, weight: isSat ? 2 : MAP_W.line,
+    opacity: isSat ? 0.95 : 0.85,
+    fillColor: color, fillOpacity: isSat ? MAP_FILL.emphasis : MAP_FILL.area // v108: was 0.4 / 0.22
   };
 }
 
@@ -4142,7 +4197,7 @@ function classifyParcelRestrictions(parcelGeom, parkEntries, muniEntries, nearby
 // exclude a parcel here either; they're surfaced as advisories in each
 // parcel's popup instead, exactly like the click report treats them.
 const SPOT_MAX_FEATURES = 800; // lower than PARCEL_VIEW_MAX_FEATURES -- keeps the O(parcels x parks/munis) overlap check bounded
-const SPOT_COLOR = "#0aa6a6";
+const SPOT_COLOR = MAP_PAL.spot; // v108: was #0aa6a6
 
 function spotStyle(){
   // v57: fillOpacity 0.35 -> 0.16 at Karim's request ("make the parcels
@@ -4150,7 +4205,7 @@ function spotStyle(){
   // no-gaps/red-restriction rework below so the now much-more-often-drawn
   // teal fill doesn't end up dominating the map now that restricted portions
   // are drawn too, right next to it, rather than left blank.
-  return {color: SPOT_COLOR, weight: 2.5, opacity: 0.95, fillColor: SPOT_COLOR, fillOpacity: 0.16, dashArray: "4 3"};
+  return {color: SPOT_COLOR, weight: 1.75, opacity: 0.95, fillColor: SPOT_COLOR, fillOpacity: 0.16}; // v108: solid (casing now does what the dash did); fill kept at Karim's v57 value
 }
 // v57: restricted portions -- a park/municipality overlap, or (when zoomed
 // in enough) the road/building/private-land buffer -- used to mean a
@@ -4163,9 +4218,9 @@ function spotStyle(){
 // one, and is kept deliberately distinct from CUTBLOCK_WARN_COLOR below
 // (a different red, for a different, non-exclusionary kind of warning) so
 // the two aren't visually conflated on a map that can show both at once.
-const RESTRICTED_COLOR = "#c0392b";
+const RESTRICTED_COLOR = MAP_PAL.restricted; // v108: was #c0392b
 function restrictedStyle(){
-  return {color: RESTRICTED_COLOR, weight: 2, opacity: 0.9, fillColor: RESTRICTED_COLOR, fillOpacity: 0.4, dashArray: "4 3"};
+  return {color: RESTRICTED_COLOR, weight: MAP_W.line, opacity: 0.95, fillColor: RESTRICTED_COLOR, fillOpacity: MAP_FILL.strong}; // v108: fill 0.4 -> 0.24, solid
 }
 function restrictionReasonLabel(reason){
   switch(reason){
@@ -4193,7 +4248,7 @@ let spotDetails = [];
 function spotDetailHtml(advisories, clipped, infraChecked, hadSpecialRoute){
   const advisoryHtml = advisories.length
     ? `<div>${advisories.map(a => `⚠ ${esc(a)}`).join('<br>')}</div>`
-    : `<div style="color:#1c7d43">No tenure/forestry advisories found overlapping this parcel.</div>`;
+    : `<div style="color:var(--green)">No tenure/forestry advisories found overlapping this parcel.</div>`;
   // v57: this popup is now only ever built for the *allowed* portion of a
   // parcel (park/muni overlap is checked per grid-point, same as the buffer,
   // not as a separate whole-parcel test any more -- see
@@ -4225,7 +4280,7 @@ function spotDetailHtml(advisories, clipped, infraChecked, hadSpecialRoute){
 }
 function spotPopup(props, advisories, clipped, infraChecked, hadSpecialRoute){
   const idx = spotDetails.push(spotDetailHtml(advisories, clipped, infraChecked, hadSpecialRoute)) - 1;
-  const advisoryBit = advisories.length ? `<span style="color:#8a5a2b">⚠ ${advisories.length} advisor${advisories.length===1?'y':'ies'}</span>` : `<span style="color:#1c7d43">no advisories</span>`;
+  const advisoryBit = advisories.length ? `<span style="color:var(--amber)">⚠ ${advisories.length} advisor${advisories.length===1?'y':'ies'}</span>` : `<span style="color:var(--green)">no advisories</span>`;
   return `<div style="font-size:12.5px;line-height:1.6;min-width:200px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><b>🎯 Potential shooting spot</b><button type="button" class="info-btn" title="Full details" aria-label="Full details" onclick="openInfoModal('🎯 Potential spot details', spotDetails[${idx}])">i</button></div>
     ${esc(props.OWNER_TYPE || "Crown / untitled provincial")} · PID ${esc(props.PID_FORMATTED || props.PID || "—")}<br>
@@ -4281,14 +4336,14 @@ const GAP_PARCEL_MAX_FEATURES = 3000; // every parcel in view, any owner type, n
 const GAP_GRID_TARGET_POINTS = 500;
 const GAP_GRID_MIN_SPACING_M = 40;
 const GAP_GRID_MAX_SPACING_M = 400;
-const GAP_COLOR = "#8a5cf5"; // distinct purple -- "presumed, inferred from absent data", separate from SPOT_COLOR's teal (confirmed Crown/untitled by ParcelMap's own record)
+const GAP_COLOR = MAP_PAL.gap; // v108: was #8a5cf5. // distinct purple -- "presumed, inferred from absent data", separate from SPOT_COLOR's teal (confirmed Crown/untitled by ParcelMap's own record)
 
 function gapStyle(){
   // v59: fillOpacity 0.3 -> 0.16 at Karim's request, matching spotStyle()'s
   // teal fillOpacity (also 0.16, since v57) so the two "allowed" colors this
   // feature draws -- confirmed Crown/untitled (teal) and presumed Crown, no
   // parcel record (purple) -- read as the same visual weight as each other.
-  return {color: GAP_COLOR, weight: 2, opacity: 0.85, fillColor: GAP_COLOR, fillOpacity: 0.16, dashArray: "2 4"};
+  return {color: GAP_COLOR, weight: MAP_W.line, opacity: 0.9, fillColor: GAP_COLOR, fillOpacity: 0.16, dashArray: MAP_DASH}; // v108: keeps the one shared dash -- "presumed", not confirmed
 }
 function gapGridSpacingForBounds(bounds){
   const sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
@@ -4332,7 +4387,7 @@ let gapDetails = [];
 function gapDetailHtml(advisories, infraChecked){
   const advisoryHtml = advisories.length
     ? `<div>${advisories.map(a => `⚠ ${esc(a)}`).join('<br>')}</div>`
-    : `<div style="color:#1c7d43">No tenure/forestry advisories found overlapping this point.</div>`;
+    : `<div style="color:var(--green)">No tenure/forestry advisories found overlapping this point.</div>`;
   const bufferNote = infraChecked
     ? `This point clears ${BUILDING_BUFFER_M}m from every nearby building or private-titled parcel and ${DEFAULT_ROAD_BUFFER_M}m from every nearby road found nearby (${SPECIAL_ROUTE_BUFFER_M}m near a listed major highway) — Karim's own chosen distances, at or above the Wildlife Act's cited legal minimums (100m buildings, 25m roads, 400m listed highways).`
     : `Zoom in further (roughly city-block scale) for this point to also be checked against the building/private-land/road buffers — not checked yet at this zoom.`;
@@ -4340,7 +4395,7 @@ function gapDetailHtml(advisories, infraChecked){
   // distance line was replaced by the shaded 500m buffer zone drawn once
   // per active cutblock, visible directly on the map.
   return `<div style="font-size:12.5px;line-height:1.6">
-    <div style="color:#6b7380">No ParcelMap record at all here — most commonly unsurveyed Crown land, inferred from the <b>absence</b> of a record rather than a positive one (unlike the teal parcels, which are confirmed Crown/untitled by ParcelMap's own data). Could also be a data gap or open water.</div>
+    <div style="color:var(--muted)">No ParcelMap record at all here — most commonly unsurveyed Crown land, inferred from the <b>absence</b> of a record rather than a positive one (unlike the teal parcels, which are confirmed Crown/untitled by ParcelMap's own data). Could also be a data gap or open water.</div>
     <div style="margin-top:8px">Not inside a park or municipal boundary — the rest of the checklist still applies.</div>
     <div style="margin-top:8px">${advisoryHtml}</div>
     <div style="margin-top:8px">${bufferNote}</div>
@@ -4348,7 +4403,7 @@ function gapDetailHtml(advisories, infraChecked){
 }
 function gapPopup(advisories, infraChecked){
   const idx = gapDetails.push(gapDetailHtml(advisories, infraChecked)) - 1;
-  const advisoryBit = advisories.length ? `<span style="color:#8a5a2b">⚠ ${advisories.length} advisor${advisories.length===1?'y':'ies'}</span>` : `<span style="color:#1c7d43">no advisories</span>`;
+  const advisoryBit = advisories.length ? `<span style="color:var(--amber)">⚠ ${advisories.length} advisor${advisories.length===1?'y':'ies'}</span>` : `<span style="color:var(--green)">no advisories</span>`;
   return `<div style="font-size:12.5px;line-height:1.6;min-width:200px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px"><b>🎯 No parcel record</b><button type="button" class="info-btn" title="Full details" aria-label="Full details" onclick="openInfoModal('🎯 Potential spot details', gapDetails[${idx}])">i</button></div>
     ${advisoryBit}
@@ -4382,7 +4437,7 @@ function gapPopup(advisories, infraChecked){
 // the LAYERS.cutblockPlan comment -- so this reveal now also queries FTEN
 // specifically to get it, independent of the RESULTS-sourced advisory check.
 const CUTBLOCK_WARN_DISTANCE_M = 400; // v50: was 500m -- Karim asked to reduce it
-const CUTBLOCK_WARN_COLOR = "#d13438"; // same red already used for "not closed out" cutblocks in the map legend -- consistent meaning, active logging concern; used for the cutblock's own outline (see activeCutblockOutlineStyle() below) since v46 dropped the filled proximity overlay
+const CUTBLOCK_WARN_COLOR = MAP_PAL.restricted; // v108: was #d13438. // same red already used for "not closed out" cutblocks in the map legend -- consistent meaning, active logging concern; used for the cutblock's own outline (see activeCutblockOutlineStyle() below) since v46 dropped the filled proximity overlay
 // Shortest distance in meters from point p to a Polygon/MultiPolygon
 // geometry's boundary, or 0 if p falls inside it -- the polygon equivalent of
 // pointToLineGeomMeters() above, built the same way (min over each outer
@@ -4401,7 +4456,7 @@ function cutblockFeatureLabel(props){
   return String(props.CUT_BLOCK_ID || props.OPENING_ID || "unknown block");
 }
 function activeCutblockOutlineStyle(){
-  return {color: CUTBLOCK_WARN_COLOR, weight: 2, opacity: 1, fillOpacity: 0, dashArray: "6 4"}; // v52: outline opacity was 0.9 -- Karim asked for the real cutblock boundary fully solid/opaque
+  return {color: CUTBLOCK_WARN_COLOR, weight: 2, opacity: 1, fillOpacity: 0}; // v108: now genuinely solid, per Karim's v52 "fully solid" // v52: outline opacity was 0.9 -- Karim asked for the real cutblock boundary fully solid/opaque
 }
 // v100: pass 2 of docs/PLAN.md's map/render.js split -- Shooting Spots
 // (renderActiveCutblockOutlines/renderActiveCutblockBuffers/renderNearbyRoads,
@@ -5173,5 +5228,9 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
   }
 }
 </script>
+<!-- v108: map overlay casing filters (see the .leaflet-overlay-pane CSS).
+     Kept out of layout with position:absolute + 0 size rather than
+     display:none, which stops filters resolving in some browsers. -->
+<svg id="kageMapFilters" aria-hidden="true" focusable="false" width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden"><defs><filter id="kage-casing-sat" x="-2%" y="-2%" width="104%" height="104%" color-interpolation-filters="sRGB"><feComponentTransfer in="SourceAlpha" result="solid"><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"/></feComponentTransfer><feMorphology in="solid" operator="dilate" radius="1" result="grown"/><feFlood flood-color="#0A0E0C" flood-opacity="0.85"/><feComposite in2="grown" operator="in" result="casing"/><feMerge><feMergeNode in="casing"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="kage-casing-light" x="-2%" y="-2%" width="104%" height="104%" color-interpolation-filters="sRGB"><feComponentTransfer in="SourceAlpha" result="solid"><feFuncA type="discrete" tableValues="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"/></feComponentTransfer><feMorphology in="solid" operator="dilate" radius="1" result="grown"/><feFlood flood-color="#FFFFFF" flood-opacity="0.8"/><feComposite in2="grown" operator="in" result="casing"/><feMerge><feMergeNode in="casing"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs></svg>
 </body>
 </html>
