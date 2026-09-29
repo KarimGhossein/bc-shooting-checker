@@ -4,17 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BC Shooting Location Checker</title>
-<!-- v65: switched to Space Grotesk at Karim's request, with NO system-font
-     fallback in body's font-family (his explicit call, not the usual
-     defensive default) -- if this Google Fonts request is ever slow or
-     blocked, text falls back to the browser's own default font rather than
-     any of the stack this app used to keep around for that case. Note:
-     Space Grotesk tops out at weight 700 on Google Fonts; the handful of
-     font-weight:800 rules elsewhere on this page (see grep) will render at
-     whatever weight the browser substitutes, typically 700. -->
+<!-- v102: replaced Space Grotesk (v65) with a two-font pairing -- Newsreader
+     (serif, italic, used sparingly for a handful of "premium" headline
+     moments) + Hanken Grotesk (sans, everything else: body copy and every
+     UI control) -- to match the editorial, high-end look of the KAGE
+     marketing site's own design system, which this redesign (Karim's ask:
+     "make the UI look more sleek like a premium product, similar to how the
+     website in this project previews the app itself") deliberately pulls
+     its whole visual language from. This supersedes v65's font choice, but
+     keeps its actual decision intact: still NO system-font fallback in
+     body's font-family (Karim's explicit call, not the usual defensive
+     default) -- if this Google Fonts request is ever slow or blocked, text
+     falls back to the browser's own default font rather than any stack this
+     app used to keep around for that case. Unlike Space Grotesk, Hanken
+     Grotesk goes up to weight 800 on Google Fonts, so the handful of
+     font-weight:800 rules elsewhere on this page render as requested now
+     instead of substituting 700. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@1,400;1,500;1,600&family=Hanken+Grotesk:wght@300;400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <!-- v61: Karim reported the app loading fully blank, no map -- traced to
      this app having no visible failure mode at all if the Leaflet library
@@ -33,18 +41,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js" onerror="window.__leafletDrawLoadFailed=true;"></script>
 <style>
   :root{
-    --navy:#101a30; --navy-2:#182746; --accent:#3b6fe0; --accent-ink:#1b4b9c;
-    --red:#c0392b;   --red-bg:#fdf1ef;   --red-line:#f2c6bf;
-    --amber:#a8650a; --amber-bg:#fff6e8; --amber-line:#f3ddac;
-    --green:#1c7d43; --green-bg:#eefaf1; --green-line:#bfe8cc;
-    --gray:#5b6570;  --gray-bg:#f1f2f4;  --gray-line:#dde0e4;
-    --border:#e4e7ec;
-    --ink:#171b21;
-    --muted:#6b7380;
+    /* v102: premium reskin -- every token below is a deliberate value swap
+       (colour, radius, shadow) modelled on the KAGE marketing site's own
+       design system (warm-editorial off-white/near-black + bronze accent,
+       large soft radii, four-hue severity palette). Every variable *name*
+       here is unchanged from before v102 -- a handful of inline JS-built
+       HTML strings (see CHECKLIST_HELP_HTML and the Leaflet-load-failure
+       message further down) and dozens of CSS rules across this file
+       reference these by name, so only the values move; nothing that reads
+       var(--red)/var(--navy)/etc needed to change. Dark mode (KAGE supports
+       it) is a deliberate v102 omission, not an oversight -- see the
+       comment above .top-bar for why. */
+    --navy:#14181A; --navy-2:#232A26; --accent:#8A6632; --accent-ink:#6B4F26;
+    --red:#B5463B;   --red-bg:color-mix(in srgb, var(--red) 13%, #fff);   --red-line:color-mix(in srgb, var(--red) 34%, #fff);
+    --amber:#B7832A; --amber-bg:color-mix(in srgb, var(--amber) 13%, #fff); --amber-line:color-mix(in srgb, var(--amber) 34%, #fff);
+    --green:#3C8A57; --green-bg:color-mix(in srgb, var(--green) 13%, #fff); --green-line:color-mix(in srgb, var(--green) 34%, #fff);
+    --gray:#8B928E;  --gray-bg:color-mix(in srgb, var(--gray) 13%, #fff);  --gray-line:color-mix(in srgb, var(--gray) 34%, #fff);
+    --border:#E7E4DC;
+    --ink:#14181A;
+    --muted:#767B74;
     --surface:#ffffff;
-    --bg:#f4f5f7;
-    --radius:12px;
-    --shadow:0 1px 2px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.05);
+    --bg:#F6F6F3;
+    --radius:18px;
+    --radius-lg:26px;
+    --radius-pill:999px;
+    --shadow:0 1px 2px rgba(20,24,22,.05), 0 10px 34px rgba(20,24,22,.09);
     /* v58: fallback only -- kept in sync with the top bar's real rendered
        height by syncHeaderHeight() (a ResizeObserver on #topBar), since the
        bar wraps to more than one line whenever its contents don't fit,
@@ -74,8 +95,17 @@
   /* The whole app is now one full-screen map (v41) -- the page itself never
      scrolls; each floating panel (top bar, bottom report, side checklist)
      scrolls its own content instead. */
-  body{margin:0;overflow:hidden;font-family:"Space Grotesk";color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;}
+  body{margin:0;overflow:hidden;font-family:"Hanken Grotesk";color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;}
   a{color:var(--accent-ink);}
+  /* v102: the one recurring serif/italic accent -- KAGE reserves Newsreader
+     italic for headline-weight moments (its own site's H1/H2s, numbered-list
+     index digits) and sets everything else, including small uppercase eyebrow
+     labels, in its sans face. This app has no real headline copy, so .headline
+     is applied narrowly and explicitly (see .tb-title, .modal-head h3,
+     .verdict-title below) rather than swapped in globally -- most of the UI
+     (buttons, labels, body text, data) stays Hanken Grotesk, matching how
+     KAGE itself only reaches for the serif in a few deliberate spots. */
+  .headline{font-family:"Newsreader";font-style:italic;font-weight:500;}
 
   /* Small round "i"/"!" buttons that open the info modal instead of showing
      their text inline -- used to keep the header, disclaimer and footer from
@@ -85,11 +115,11 @@
      the specific case of the legal disclaimer, styled to still read as a
      warning even collapsed down to one line. */
   .info-btn{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;font-size:11.5px;font-weight:800;font-style:italic;font-family:Georgia,'Times New Roman',serif;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;flex:0 0 auto;line-height:1;padding:0;transition:background .12s ease,color .12s ease;}
-  .info-btn:hover{background:#e7e9ed;color:var(--ink);}
+  .info-btn:hover{background:#ECEAE2;color:var(--ink);}
   .info-btn.on-dark{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4);}
   .info-btn.on-dark:hover{background:rgba(255,255,255,.26);}
 
-  .caution-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,161,148,.35);border-radius:9px;padding:7px 11px;font-size:12px;font-weight:700;color:#ffd9d3;cursor:pointer;font-family:inherit;white-space:nowrap;}
+  .caution-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid color-mix(in srgb, var(--red) 55%, transparent);border-radius:var(--radius-pill);padding:7px 12px;font-size:12px;font-weight:700;color:color-mix(in srgb, var(--red) 45%, #fff);cursor:pointer;font-family:inherit;white-space:nowrap;}
   .caution-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
   .caution-btn .dot{font-size:13px;line-height:1;}
 
@@ -103,7 +133,7 @@
 
   .place-search-results{margin-top:10px;max-height:280px;overflow-y:auto;}
   .place-search-result{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font:inherit;font-size:12.5px;line-height:1.4;color:var(--ink);}
-  .place-search-result:hover{background:#eef1f6;border-color:var(--accent);}
+  .place-search-result:hover{background:#F1EEE5;border-color:var(--accent);}
 
   /* ---- full-screen map shell (v41): top bar, bottom report drawer, side
      checklist drawer, all floating over an edge-to-edge map ---- */
@@ -124,8 +154,18 @@
      them for space); see the max-width:760px query below for how this folds
      to a stacked layout once there's no room for three independent regions
      on one line. */
-  .top-bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;color:#fff;background:linear-gradient(135deg,rgba(16,26,48,.5) 0%,rgba(24,39,70,.5) 100%);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 2px 14px rgba(0,0,0,.22);}
-  .top-bar .tb-title{font-size:15px;font-weight:700;letter-spacing:-.1px;display:flex;align-items:center;gap:8px;white-space:nowrap;}
+  /* v102: was a solid navy-blue gradient bar; every other floating panel in
+     this app (bottom report, checklist, tools drawer) was already a
+     translucent-white blur, so the header was the one piece of chrome that
+     didn't match either its own siblings or KAGE's own sticky-header
+     treatment (also a translucent blur, just light-on-light there). Kept it
+     dark rather than switching it to the same off-white as the drawers --
+     the header is the one persistent anchor on screen the whole time the
+     map's own imagery is showing through everywhere else, and a dark glass
+     bar reads as "chrome" against that in a way an off-white one wouldn't
+     -- so it's now a translucent near-black ink blur instead of navy. */
+  .top-bar{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;color:#fff;background:rgba(20,24,22,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 2px 20px rgba(20,24,22,.24);}
+  .top-bar .tb-title{font-family:"Newsreader";font-style:italic;font-weight:500;font-size:17px;letter-spacing:0;display:flex;align-items:center;gap:8px;white-space:nowrap;}
   .top-bar .tb-title .icon{font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25));}
   .tb-left{display:flex;align-items:center;flex:0 0 auto;}
   .tb-right{display:flex;align-items:center;gap:8px;flex:0 0 auto;margin-left:auto;}
@@ -146,7 +186,7 @@
      vertically centred with translate(-50%,-50%) below -- a status line that
      grew the wrap's real content height would otherwise nudge the search box
      itself up/down by half that amount every time the text changed. */
-  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:540px;padding:0 150px;box-sizing:border-box;}
+  .tb-search-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;max-width:560px;padding:0 150px;box-sizing:border-box;}
   /* v76: Karim asked for the "i" (how-to-search) icon to move out of the
      search box itself, to sit to the right of the Search button instead --
      .tb-search-row holds the actual search box and that icon side by side,
@@ -156,13 +196,13 @@
      before -- they only ever care about the wrap's width, not which element
      inside it they're visually under. */
   .tb-search-row{position:relative;display:flex;align-items:center;gap:8px;width:100%;}
-  .tb-search{position:relative;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);border-radius:10px;padding:4px 4px 4px 12px;flex:1 1 auto;min-width:0;box-sizing:border-box;}
+  .tb-search{position:relative;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);border-radius:var(--radius-pill);padding:4px 4px 4px 16px;flex:1 1 auto;min-width:0;box-sizing:border-box;}
   .tb-search:focus-within{outline:2px solid var(--accent);outline-offset:1px;}
   .tb-search input{flex:1 1 auto;min-width:0;padding:6px 4px;border:0;background:transparent;border-radius:5px;font-size:13px;color:#fff;}
   .tb-search input::placeholder{color:rgba(255,255,255,.45);}
   .tb-search input:focus{outline:none;}
-  .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
-  .tb-search #searchGoBtn:hover{background:#2f5fc9;}
+  .tb-search #searchGoBtn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border:0;border-radius:var(--radius-pill);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .12s ease;flex:0 0 auto;}
+  .tb-search #searchGoBtn:hover{background:color-mix(in srgb, var(--accent) 82%, #000);}
   /* v88: #searchStatus used to carry its own position:absolute (top:calc(100%
      + 6px)) directly; now that the Potential Spots progress bar sits right
      below it in the same column, .tb-status-wrap owns that absolute
@@ -207,7 +247,7 @@
      open width (260/360px) lets both be open and legible together instead,
      the same "real measured value over a hardcoded guess" pattern the rest
      of this app already uses for --tb-h/--sc-tab-h. */
-  .bottom-panel{position:fixed;left:0;right:var(--right-drawer-w);bottom:0;z-index:550;display:flex;flex-direction:column;max-height:64vh;background:rgba(255,255,255,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.55);box-shadow:0 -4px 22px rgba(16,24,40,.16);transition:right .18s ease;}
+  .bottom-panel{position:fixed;left:0;right:var(--right-drawer-w);bottom:0;z-index:550;display:flex;flex-direction:column;max-height:64vh;background:rgba(246,246,243,.74);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,.6);border-radius:var(--radius-lg) var(--radius-lg) 0 0;box-shadow:0 -6px 28px rgba(20,24,22,.14);transition:right .18s ease;}
   .bottom-panel.resizing{transition:none;} /* no fighting the drag with any (future) height transition */
   /* Drag-to-resize handle -- a small grip bar spanning the top edge, always
      shown (even collapsed, so grabbing it both opens *and* sizes the drawer
@@ -246,7 +286,7 @@
      deliberate -- see #mapWrap above); every other drawer now stops there. */
   .side-checklist{position:fixed;top:var(--tb-h);right:0;bottom:0;z-index:560;display:flex;pointer-events:none;}
   .side-checklist > *{pointer-events:auto;}
-  .sc-tab{align-self:flex-start;writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:10px 0 0 10px;padding:16px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);}
+  .sc-tab{align-self:flex-start;writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:12px 0 0 12px;padding:16px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);}
   .sc-tab:hover{background:#233766;}
   /* v73: border/box-shadow live only on the .open rule below, not here --
      box-sizing:border-box (see :root above) still renders a 1px border (and
@@ -257,8 +297,8 @@
      hairline sliver sitting just past the collapsed tab -- exactly the bug
      Karim reported on the tools drawer's mirror-image twin below. Fixed at
      the root here too, not just on the one Karim noticed. */
-  .sc-panel{width:0;overflow:hidden;height:100%;background:rgba(255,255,255,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:width .18s ease;display:flex;flex-direction:column;}
-  .side-checklist.open .sc-panel{width:360px;border-left:1px solid rgba(255,255,255,.55);box-shadow:-4px 0 26px rgba(16,24,40,.16);}
+  .sc-panel{width:0;overflow:hidden;height:100%;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
+  .side-checklist.open .sc-panel{width:360px;border-left:1px solid rgba(255,255,255,.6);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
   .sc-head{display:flex;align-items:center;gap:8px;padding:16px 16px 10px;flex:0 0 auto;}
   .sc-head h2{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:7px;white-space:nowrap;}
   .sc-close{margin-left:auto;background:none;border:0;font-size:15px;color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:6px;flex:0 0 auto;}
@@ -313,10 +353,10 @@
      measured height (--sc-tab-h, kept live by syncChecklistTabHeight()) plus
      a gap -- same "real measured clearance, not a guessed fixed offset"
      pattern v73 used for the old left-edge tab against Leaflet's controls. */
-  .td-tab{align-self:flex-start;margin-top:calc(var(--sc-tab-h) + 10px);writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:10px 0 0 10px;padding:14px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);transition:background .12s ease;}
-  .td-tab:hover{background:#233766;}
-  .td-panel{width:0;overflow:hidden;height:100%;background:rgba(255,255,255,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:width .18s ease;display:flex;flex-direction:column;}
-  .tools-drawer.open .td-panel{width:260px;border-left:1px solid rgba(255,255,255,.55);box-shadow:-4px 0 26px rgba(16,24,40,.16);}
+  .td-tab{align-self:flex-start;margin-top:calc(var(--sc-tab-h) + 10px);writing-mode:vertical-rl;text-orientation:mixed;background:var(--navy);color:#fff;border:0;border-radius:12px 0 0 12px;padding:14px 9px;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;box-shadow:var(--shadow);transition:background .12s ease;}
+  .td-tab:hover{background:var(--navy-2);}
+  .td-panel{width:0;overflow:hidden;height:100%;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:width .18s ease;display:flex;flex-direction:column;}
+  .tools-drawer.open .td-panel{width:270px;border-left:1px solid rgba(255,255,255,.6);box-shadow:-4px 0 30px rgba(20,24,22,.14);}
   .td-head{display:flex;align-items:center;gap:8px;padding:16px 16px 10px;flex:0 0 auto;}
   .td-head h2{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0;display:flex;align-items:center;gap:7px;white-space:nowrap;}
   .td-close{margin-left:auto;background:none;border:0;font-size:15px;color:var(--muted);cursor:pointer;padding:3px 6px;border-radius:6px;flex:0 0 auto;}
@@ -340,14 +380,14 @@
      separate .bm-btn buttons only implied via a colour change on whichever
      one happened to be active. Markup and thumb math both key off
      data-base's index among the three .seg3-btn children. */
-  .seg3{position:relative;display:flex;background:rgba(15,23,42,.07);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px;}
+  .seg3{position:relative;display:flex;background:rgba(20,24,22,.06);border:1px solid var(--border);border-radius:var(--radius-pill);padding:3px;gap:2px;}
   /* width matches one button's own rendered width exactly (container minus
      2x3px padding minus 2x2px gap, divided by 3) so moveBasemapThumb()'s
      translateX(idx * 100% + idx * 2px) -- 100% of the thumb's *own* width
      plus one gap per step -- lands it precisely under each button instead of
      drifting a few px off by the third segment. */
-  .seg3-thumb{position:absolute;top:3px;left:3px;width:calc((100% - 10px)/3);height:calc(100% - 6px);background:var(--navy);border-radius:7px;transition:transform .18s ease;}
-  .seg3-btn{position:relative;z-index:1;flex:1 1 0;min-width:0;border:0;background:none;padding:7px 3px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;border-radius:7px;white-space:nowrap;text-align:center;transition:color .12s ease;}
+  .seg3-thumb{position:absolute;top:3px;left:3px;width:calc((100% - 10px)/3);height:calc(100% - 6px);background:var(--navy);border-radius:var(--radius-pill);transition:transform .18s ease;}
+  .seg3-btn{position:relative;z-index:1;flex:1 1 0;min-width:0;border:0;background:none;padding:7px 3px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;border-radius:var(--radius-pill);white-space:nowrap;text-align:center;transition:color .12s ease;}
   .seg3-btn.active{color:#fff;}
 
   /* v73: the status note used to be bare text floating under the buttons --
@@ -355,7 +395,7 @@
      run's actual result. A light card gives it the same "this is a distinct
      piece of information" treatment every status/result area in the rest of
      the app already gets (report cards, the checklist). */
-  .td-status{background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:9px;padding:9px 10px;}
+  .td-status{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
   /* v96: this card only ever holds #mapActionsNote, and every call site sets
      that with real text (see revealAllParcels()/revealAllRoads()/
      revealPotentialSpots()/runPotentialSpotsSearch() and its own comment on
@@ -368,16 +408,16 @@
      from four separate call sites. */
   .td-status:has(#mapActionsNote:empty){display:none;}
 
-  .modal-overlay{position:fixed;inset:0;background:rgba(12,16,26,.5);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(16,20,18,.55);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;}
   .modal-overlay.open{display:flex;}
-  .modal-box{background:var(--surface);border-radius:var(--radius);box-shadow:0 8px 40px rgba(16,24,40,.25);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:18px 20px;}
+  .modal-box{background:var(--surface);border-radius:var(--radius-lg);box-shadow:0 12px 50px rgba(20,24,22,.28);max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:20px 22px;}
   .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;}
-  .modal-head h3{margin:0;font-size:15px;font-weight:700;color:var(--ink);line-height:1.4;}
+  .modal-head h3{margin:0;font-family:"Newsreader";font-style:italic;font-weight:500;font-size:19px;color:var(--ink);line-height:1.4;}
   .modal-close{background:none;border:0;font-size:15px;line-height:1;cursor:pointer;color:var(--muted);padding:3px 6px;border-radius:6px;flex:0 0 auto;}
   .modal-close:hover{background:var(--bg);color:var(--ink);}
-  .modal-body{font-size:13px;line-height:1.65;color:#2c313a;}
+  .modal-body{font-size:13px;line-height:1.65;color:#2A2E29;}
   .modal-body a{color:var(--accent-ink);}
-  .modal-body b{color:#111;}
+  .modal-body b{color:var(--ink);}
   .modal-body .mrow{margin:5px 0;}
   .modal-body .mnote{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);color:var(--muted);font-size:12px;}
 
@@ -401,7 +441,7 @@
      button/row/note styles themselves survive here; the old
      position:absolute .map-actions box and the v69 .ma-label (a button
      again as of v71, so back to .ma-btn) are gone. */
-  .ma-btn{border:1px solid var(--border);background:#fff;font-size:11.5px;font-weight:700;padding:7px 9px;border-radius:7px;cursor:pointer;color:var(--navy);text-align:left;}
+  .ma-btn{border:1px solid var(--border);background:#fff;font-size:11.5px;font-weight:700;padding:8px 12px;border-radius:var(--radius-pill);cursor:pointer;color:var(--navy);text-align:left;}
   .ma-btn:hover{background:var(--bg);}
   .ma-btn.busy{opacity:.6;cursor:wait;}
   .ma-note{font-size:10.5px;color:var(--muted);line-height:1.4;}
@@ -420,8 +460,8 @@
      scroll, same pattern .place-search-results already uses, so the list
      stays reachable without pushing the rest of the drawer down. */
   #clearMenuRow{position:relative;}
-  .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);padding:6px;z-index:10;max-height:280px;overflow-y:auto;}
-  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:7px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);}
+  .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:6px;z-index:10;max-height:280px;overflow-y:auto;}
+  .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--navy);}
   .clear-menu-item:last-child{margin-bottom:0;}
   .clear-menu-item:hover{background:var(--bg);}
 
@@ -431,7 +471,7 @@
      to open over this corner, see the v75 body.tools-open history below)
      moved to the right edge, so the margin-left shift that used to live here
      is gone as dead code along with it. */
-  .map-legend{position:absolute;left:10px;bottom:66px;z-index:450;background:rgba(255,255,255,.5);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:11.5px;line-height:1.6;box-shadow:var(--shadow);max-width:230px;}
+  .map-legend{position:absolute;left:10px;bottom:66px;z-index:450;background:rgba(246,246,243,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--border);border-radius:16px;padding:10px 12px;font-size:11.5px;line-height:1.6;box-shadow:var(--shadow);max-width:230px;}
   /* v72: the header row now holds two controls (the expand/collapse toggle,
      plus a small "i" for the handful of legend-wide behaviour notes that
      aren't tied to any one row -- see the legendUsage entry in LEGEND_INFO)
@@ -491,12 +531,12 @@
      bottom report drawer now does the analogous "make room" job for the
      *right* edge instead -- see .bottom-panel's own comment. */
 
-  .verdict{border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;font-size:13.5px;line-height:1.6;box-shadow:var(--shadow);}
+  .verdict{border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px;font-size:13.5px;line-height:1.6;box-shadow:var(--shadow);}
   .verdict.red{background:var(--red-bg);border:1px solid var(--red-line);}
   .verdict.amber{background:var(--amber-bg);border:1px solid var(--amber-line);}
   .verdict.green{background:var(--green-bg);border:1px solid var(--green-line);}
   .verdict.gray{background:var(--gray-bg);border:1px solid var(--gray-line);}
-  .verdict-title{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;margin-bottom:2px;}
+  .verdict-title{display:flex;align-items:center;gap:9px;font-family:"Newsreader";font-style:italic;font-weight:500;font-size:19px;margin-bottom:2px;}
   .verdict-title .vicon{font-size:18px;}
   /* v76: replaces the old flat "every reason from every card, in one long
      bulleted list" -- Karim asked for just the state up top, then which
@@ -522,7 +562,7 @@
   .vf-col-empty{font-size:11.5px;color:var(--muted);font-style:italic;}
   .verdict-flags-gray{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;}
   .vf-gray-label{font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);}
-  .flag-chip{display:inline-flex;align-items:center;gap:5px;max-width:100%;border:1px solid transparent;border-radius:20px;padding:4px 11px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:filter .12s ease;}
+  .flag-chip{display:inline-flex;align-items:center;gap:5px;max-width:100%;border:1px solid transparent;border-radius:var(--radius-pill);padding:4px 12px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;transition:filter .12s ease;}
   .flag-chip:hover{filter:brightness(0.95);}
   .flag-chip .fc-icon{font-size:12px;}
   .flag-chip-red{background:var(--red-bg);border-color:var(--red-line);color:var(--red);}
@@ -535,17 +575,17 @@
   }
   .verdict .fine-print{margin-top:12px;padding-top:10px;border-top:1px solid rgba(0,0,0,.08);font-size:12px;color:var(--muted);}
 
-  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;margin-right:6px;vertical-align:middle;}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:var(--radius-pill);margin-right:6px;vertical-align:middle;}
   .badge.red{background:var(--red);color:#fff;}
   .badge.amber{background:var(--amber);color:#fff;}
   .badge.green{background:var(--green);color:#fff;}
   .badge.gray{background:var(--gray);color:#fff;}
 
-  .field{font-size:13px;margin:4px 0;color:#333;line-height:1.5;}
-  .field b{color:#111;font-weight:600;}
+  .field{font-size:13px;margin:4px 0;color:#2A2E29;line-height:1.5;}
+  .field b{color:var(--ink);font-weight:600;}
   .empty{color:var(--muted);font-size:13px;font-style:italic;}
 
-  .card{border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;background:var(--surface);box-shadow:var(--shadow);scroll-margin-top:16px;}
+  .card{border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;margin-bottom:12px;background:var(--surface);box-shadow:var(--shadow);scroll-margin-top:16px;}
   /* v76: a card whose section pushed a reason (see addReason()/pushCard() in
      renderReport) is tinted in that reason's own colour -- same four tokens
      the verdict box and .flag-chip above already use -- so a flagged
@@ -579,7 +619,7 @@
      entirely and just render their single line, so minimalism doesn't turn
      into an extra click for content that was never going to be more than a
      sentence anyway. */
-  .details-toggle{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit;transition:background .12s ease,color .12s ease;}
+  .details-toggle{display:inline-flex;align-items:center;gap:4px;background:none;border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 10px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:inherit;transition:background .12s ease,color .12s ease;}
   .details-toggle:hover{background:var(--bg);color:var(--ink);}
   .details-toggle .arrow{font-size:9px;display:inline-block;transition:transform .15s ease;}
   .details-toggle.open .arrow{transform:rotate(180deg);}
@@ -598,15 +638,15 @@
   .flag-explain ul{margin:0;padding-left:18px;}
   .flag-explain li{margin:3px 0;}
 
-  .checklist-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:8px;}
+  .checklist-group{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:9px;}
   .checklist-item{display:flex;align-items:center;flex-wrap:wrap;gap:11px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s ease;}
-  .checklist-item:hover{background:#fafbfc;}
+  .checklist-item:hover{background:#FAFAF7;}
   .checklist-item:last-child{border-bottom:none;}
   .checklist-item input[type=checkbox]{margin-top:3px;flex:0 0 auto;width:16px;height:16px;accent-color:var(--navy);cursor:pointer;}
   /* v78: flex:1 lets .txt claim the row's slack space so .ci-actions (the
      "i"/"See report" group) always lands flush against the right edge
      instead of trailing immediately after the title text. */
-  .checklist-item .txt{flex:1 1 auto;min-width:120px;font-size:13px;line-height:1.55;color:#2c313a;}
+  .checklist-item .txt{flex:1 1 auto;min-width:120px;font-size:13px;line-height:1.55;color:#2A2E29;}
   .checklist-item:has(input:checked) .txt{color:var(--muted);}
   .checklist-item:has(input:checked) .txt b{color:var(--muted);}
   .checklist-item .txt .tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.4px;padding:2px 7px;border-radius:5px;margin-right:7px;vertical-align:1px;}
@@ -626,7 +666,7 @@
      report" after it, in DOM order. */
   .ci-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto;}
   .ci-i{width:16px;height:16px;font-size:9.5px;}
-  .ci-jump{display:inline-flex;align-items:center;gap:3px;background:none;border:1px solid var(--border);border-radius:20px;padding:2px 9px;font:inherit;font-size:10.5px;font-weight:700;color:var(--accent-ink);cursor:pointer;white-space:nowrap;}
+  .ci-jump{display:inline-flex;align-items:center;gap:3px;background:none;border:1px solid var(--border);border-radius:var(--radius-pill);padding:2px 10px;font:inherit;font-size:10.5px;font-weight:700;color:var(--accent-ink);cursor:pointer;white-space:nowrap;}
   .ci-jump:hover{background:var(--bg);}
 
   .status-line{font-size:12.5px;color:var(--muted);margin-top:6px;}
@@ -639,11 +679,11 @@
   .spinner{width:15px;height:15px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);animation:spin .7s linear infinite;flex:0 0 auto;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  .small-btn{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:600;cursor:pointer;color:#3a414c;transition:background .12s ease;}
+  .small-btn{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-pill);padding:5px 12px;font-size:11.5px;font-weight:600;cursor:pointer;color:#3a3f3a;transition:background .12s ease;}
   .small-btn:hover{background:var(--bg);}
 
   ::-webkit-scrollbar{width:10px;height:10px;}
-  ::-webkit-scrollbar-thumb{background:#d6d9de;border-radius:6px;border:2px solid var(--bg);}
+  ::-webkit-scrollbar-thumb{background:#DAD8CE;border-radius:6px;border:2px solid var(--bg);}
   .bp-body::-webkit-scrollbar-thumb{border-color:#fff;}
 
   /* ---- Custom map markup (onX-style pins/lines/areas) ---- */
@@ -672,7 +712,7 @@
      markupFlashStatus()'s querySelector below) and the same internal
      mp-toggle/mp-body collapse, just without its own position/right/bottom/
      z-index now that .td-scroll places it. */
-  #markupPanel{background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:9px;font-size:11.5px;overflow:hidden;}
+  #markupPanel{background:rgba(255,255,255,.6);border:1px solid var(--border);border-radius:12px;font-size:11.5px;overflow:hidden;}
   .mp-toggle{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:10px 12px;margin:0;cursor:pointer;font:inherit;font-weight:800;letter-spacing:.4px;text-transform:uppercase;font-size:10px;color:var(--muted);}
   .mp-toggle .arrow{margin-left:auto;font-size:9px;transition:transform .15s ease;}
   .mp-toggle.open .arrow{transform:rotate(180deg);}
@@ -684,7 +724,7 @@
   .mp-row:hover{background:var(--bg);}
   .mp-row .mp-sw{width:11px;height:11px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(0,0,0,.15);}
   .mp-row .mp-sw.line{border-radius:0;height:3px;width:14px;border:none;}
-  .mp-row .mp-name{flex:1 1 auto;font-size:12px;color:#2c313a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .mp-row .mp-name{flex:1 1 auto;font-size:12px;color:#2A2E29;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .mp-row .mp-edit{background:none;border:0;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;flex:0 0 auto;}
   .mp-row .mp-edit:hover{color:var(--ink);}
   .mp-actions{display:flex;gap:6px;padding-top:8px;border-top:1px solid var(--border);}
@@ -706,9 +746,9 @@
   .mf-icon-group-label{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin:6px 0 5px 4px;}
   .mf-icon-group:first-child .mf-icon-group-label{margin-top:2px;}
   .mf-icon-group-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 4px;}
-  .mf-icon-btn{width:30px;height:30px;flex:0 0 auto;border-radius:7px;border:2px solid transparent;background:#fff;cursor:pointer;padding:5px;color:#4a5261;display:flex;align-items:center;justify-content:center;}
+  .mf-icon-btn{width:30px;height:30px;flex:0 0 auto;border-radius:9px;border:2px solid transparent;background:#fff;cursor:pointer;padding:5px;color:#565B54;display:flex;align-items:center;justify-content:center;}
   .mf-icon-btn svg{width:100%;height:100%;}
-  .mf-icon-btn:hover{background:#eef1f5;}
+  .mf-icon-btn:hover{background:#F1EEE5;}
   .mf-icon-btn.sel{border-color:var(--accent);color:var(--accent);background:#fff;}
   .mf-icon-btn.mf-icon-none{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.2px;}
   .mf-btnrow{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
