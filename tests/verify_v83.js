@@ -35,11 +35,11 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
 
     // Simulate a 'spots' draw (Potential Spots) registering a gap square at the same spot.
     resetClickableSource('spots');
-    pushClickable(square, '🎯', 'No parcel record (presumed Crown)', '🎯 No parcel record', '<div>gap</div>');
+    pushClickable(square, '', 'No parcel record (presumed Crown)', 'No parcel record', '<div>gap</div>');
     const afterSpots = currentClickableFeatures.length;
     const bothPresent = currentClickableFeatures.some(f => f.source === 'overlay') && currentClickableFeatures.some(f => f.source === 'spots');
 
-    // Re-run renderMapOverlays (a fresh 'overlay' reset) -- the 'spots' entry must survive.
+    // Re-run renderMapOverlays (a fresh 'overlay' reset), the 'spots' entry must survive.
     renderMapOverlays({
       parcelR: { ok: true, features: [] }, nearbyParcelR: { ok: true, features: [] },
       muniR: { ok: true, features: [] }, parkR: { ok: false, features: [] }, wmaR: { ok: false, features: [] },
@@ -75,7 +75,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     resetClickableSource('spots');
     const square = { type: 'Polygon', coordinates: [[[-121.51, 50.49], [-121.49, 50.49], [-121.49, 50.51], [-121.51, 50.51], [-121.51, 50.49]]] };
     renderActiveCutblockOutlines([{ geometry: square, properties: { CUT_BLOCK_ID: 'ABC' } }], spotLayer);
-    return currentClickableFeatures.filter(f => f.source === 'spots' && f.icon === '🪓').length;
+    return currentClickableFeatures.filter(f => f.source === 'spots' && f.icon === '').length;
   });
 
   // 4) Forestry-inside-buffer flag is now 'red', not 'amber'.

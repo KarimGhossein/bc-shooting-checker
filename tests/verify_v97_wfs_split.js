@@ -1,8 +1,8 @@
 // Regression test for v97: the second slice of docs/PLAN.md's module split
-// (after v92's config/constants.js + config/layers.js) -- WFS_BASE / wfsUrl()
+// (after v92's config/constants.js + config/layers.js), WFS_BASE / wfsUrl()
 // / jsonpCounter / jsonpRequest() / queryLayer() / pt() / cqlFor() /
 // viewportPolygonWkt() / viewportBboxCql() moved to src/data/wfs.js, loaded
-// as a plain classic <script src> (not an ES module -- see that file's own
+// as a plain classic <script src> (not an ES module, see that file's own
 // top comment, and docs/PLAN.md's "Why classic scripts" section, for why:
 // an ES module's import is blocked by CORS under file://, which would break
 // both this app's file://-loaded test suite and its standalone "open
@@ -11,13 +11,13 @@
 // This confirms the split actually took (the values/functions are defined,
 // loaded from the right external file, in the right order, and actually do
 // the right thing) rather than just happening to still work because nothing
-// was really moved -- and separately confirms, straight from disk, that the
+// was really moved, and separately confirms, straight from disk, that the
 // old inline declarations are gone from index.html and the new file really
 // has them (mirroring tests/verify_v92_config_split.js's pattern).
 //
 // Scope note (see src/data/wfs.js's own comment for the full rationale):
 // queryOpen511()/OPEN511_BASE and radiusCql() are deliberately NOT part of
-// this slice and are NOT checked as "moved" here -- they're confirmed to
+// this slice and are NOT checked as "moved" here, they're confirmed to
 // still be defined (inline) so this test would catch them being accidentally
 // dropped, but their location is not asserted as having changed.
 const { chromium } = require('playwright');
@@ -53,16 +53,16 @@ const ROOT = path.resolve(__dirname, '..');
     out.viewportPolygonWktType = typeof viewportPolygonWkt;
     out.viewportBboxCqlType = typeof viewportBboxCql;
 
-    // Still inline, out of scope for this slice -- confirm they weren't
+    // Still inline, out of scope for this slice, confirm they weren't
     // accidentally dropped along with everything else.
     out.queryOpen511Type = typeof queryOpen511;
     out.open511BaseType = typeof OPEN511_BASE;
     out.radiusCqlType = typeof radiusCql;
 
-    // Functional checks -- not just "defined", but actually correct.
+    // Functional checks, not just "defined", but actually correct.
     out.wfsUrlSample = wfsUrl('WHSE_TEST.LAYER', "SOME_CQL", "json", 5);
     out.ptSample = pt(49.28, -123.12);
-    out.cqlForSample = cqlFor('road', 49.28, -123.12); // road layer -- DWITHIN mode
+    out.cqlForSample = cqlFor('road', 49.28, -123.12); // road layer, DWITHIN mode
     const bounds = L.latLngBounds([49.0, -123.5], [49.5, -123.0]);
     out.viewportPolygonWktSample = viewportPolygonWkt(bounds);
     out.viewportBboxCqlSample = viewportBboxCql('GEOMETRY', bounds, 'FOO=1');
@@ -86,7 +86,7 @@ const ROOT = path.resolve(__dirname, '..');
 
   // Also confirm, directly from disk (not the browser), that these
   // declarations no longer live inline in index.html and really do live in
-  // src/data/wfs.js -- the DOM check above could pass even if a stray
+  // src/data/wfs.js, the DOM check above could pass even if a stray
   // duplicate remained (redeclare would throw, but checking explicitly is
   // cheap and catches the file-organization intent, not just runtime
   // behaviour).
@@ -104,7 +104,7 @@ const ROOT = path.resolve(__dirname, '..');
       inlineHasCqlFor: /\bfunction cqlFor\(/.test(inline),
       inlineHasViewportPolygonWkt: /\bfunction viewportPolygonWkt\(/.test(inline),
       inlineHasViewportBboxCql: /\bfunction viewportBboxCql\(/.test(inline),
-      // Out-of-scope for this slice -- must still be inline.
+      // Out-of-scope for this slice, must still be inline.
       inlineHasQueryOpen511: /\basync function queryOpen511\(/.test(inline),
       inlineHasRadiusCql: /\bfunction radiusCql\(/.test(inline),
       wfsFileHasAll: [

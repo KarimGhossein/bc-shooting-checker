@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Test runner for the network-stubbed Playwright verification suite.
 //
-// These scripts predate this repository -- each one was written ad hoc
+// These scripts predate this repository, each one was written ad hoc
 // alongside a specific bug fix and run manually (see docs/CHANGELOG.md for
 // which version each corresponds to). This runner is what turns that habit
 // into something CI can actually check: every verify_*.js in this directory
@@ -10,7 +10,7 @@
 // "=== errors ===" (the convention every one of these scripts follows).
 //
 // This does not replace writing real assert()-style tests going forward --
-// see docs/PLAN.md for that -- but it means today's whole suite is a single
+// see docs/PLAN.md for that, but it means today's whole suite is a single
 // `npm test` instead of nine scripts run by hand.
 const { spawnSync } = require("child_process");
 const fs = require("fs");

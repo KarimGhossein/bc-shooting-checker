@@ -1,7 +1,7 @@
-// Regression test for v104 -- four quick follow-ups Karim sent right after
+// Regression test for v104, four quick follow-ups Karim sent right after
 // v103 shipped, all addressed in the same pass (see docs/CHANGELOG.md's v104
 // section for the full writeup):
-//   1) "The header should also change with light mode" -- v103 shipped with
+//   1) "The header should also change with light mode", v103 shipped with
 //      the header deliberately staying constant dark glass in both themes
 //      (a scope call documented at the time). Karim corrected that: the
 //      header now uses the same --menu-bg/var(--ink) tokens every other
@@ -10,19 +10,19 @@
 //      white onto new theme-aware --chrome-chip-* tokens, so they stay
 //      legible in both themes instead of just dark.
 //   2) "Change the name in the header to 'Shooting Map' and remove the
-//      emoji" -- .tb-title's text and its leading target-emoji <span>.
+//      emoji", .tb-title's text and its leading target-emoji <span>.
 //   3) "The background colour of the items in the checklist in dark mode
 //      should be darker also instead of incomplete lets just put a coloured
 //      dot beside the items corresponding to their completion status like
-//      how the preview on the KAGE website has it" -- two changes: the
+//      how the preview on the KAGE website has it", two changes: the
 //      checklist card's own background (--checklist-card-bg) is now
 //      theme-aware and darker in dark mode instead of staying a hardcoded
 //      translucent white; and every checklist item's "Done"/"Incomplete"/
 //      "MANUAL" text pill is now a small coloured dot (.ci-dot), matching
 //      the small circular status marker the KAGE site's own map-page
 //      preview uses in its report-card rows.
-//   4) "remove the check mark emoji from the checklist" -- the "Full
-//      checklist" drawer heading's leading ✅.
+//   4) "remove the check mark emoji from the checklist", the "Full
+//      checklist" drawer heading's leading .
 const { chromium } = require('playwright');
 const { launchOpts } = require('./launch');
 const fs = require('fs');
@@ -81,13 +81,13 @@ async function newPage(browser){
 
     // dark mode must still look exactly like it did before this pass (the
     // whole point of --menu-bg's dark value already equalling the old
-    // hardcoded header rgba) -- confirm the literal pixel value too.
+    // hardcoded header rgba), confirm the literal pixel value too.
     out.topBarBgRaw = out.topBarBg;
 
     // ---- checklist: no more .tag elements anywhere, .ci-dot in their place ----
     out.tagElementCount = document.querySelectorAll('.checklist-item .tag').length;
-    out.checklistHeadingText = document.querySelector('.side-checklist .sc-head h2').textContent.replace(/\s+/g, ' ').trim();
-    out.checklistHeadingHasCheckEmoji = document.querySelector('.side-checklist .sc-head h2').innerHTML.includes('✅');
+    out.checklistHeadingText = document.querySelector('.side-checklist .rd-head h2').textContent.replace(/\s+/g, ' ').trim();
+    out.checklistHeadingHasCheckEmoji = /[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u.test(document.querySelector('.side-checklist .rd-head h2').innerHTML);
 
     return out;
   });
@@ -106,7 +106,7 @@ async function newPage(browser){
     out.dotCount = dotEls.length;
     out.dotClasses = dotEls.map(d => d.className);
     out.hasDoneOrIncomplete = dotEls.some(d => d.classList.contains('ci-dot-done') || d.classList.contains('ci-dot-incomplete'));
-    out.hasManual = dotEls.some(d => d.classList.contains('ci-dot-manual'));
+    out.hasManual = document.querySelectorAll('.checklist-item .ci-check').length > 0; // v109: manual items use a tick box instead of a dot
 
     // dark-mode checklist card background is genuinely different (darker)
     // from the drawer panel's own background, not the old hardcoded
@@ -164,12 +164,12 @@ async function newPage(browser){
     && dark.tbTitleIconSpanExists === false
     && dark.topBarBg === dark.menuBgResolved
     && dark.topBarColor === dark.inkResolved
-    && dark.topBarBgRaw === 'rgba(20, 24, 22, 0.72)' // pixel-identical to the pre-v104 hardcoded header colour
+    && dark.topBarBgRaw === 'rgba(12, 15, 13, 0.78)' // v109: darker dark
     && dark.tagElementCount === 0
-    && dark.checklistHeadingText === 'Full checklist i'
+    && dark.checklistHeadingText === 'Checklist'
     && dark.checklistHeadingHasCheckEmoji === false
     && dots.dotCount > 0 && dots.hasDoneOrIncomplete && dots.hasManual
-    && dots.checklistCardBg === 'rgba(0, 0, 0, 0.35)'
+    && dots.checklistCardBg === 'rgba(0, 0, 0, 0.3)'
     && light.themeAttr === 'light'
     && light.topBarBg === light.menuBgResolved
     && light.topBarBg === 'rgba(246, 246, 243, 0.72)'

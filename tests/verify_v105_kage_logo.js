@@ -1,4 +1,4 @@
-// Regression test for v105 -- the KAGE "Front Sight" logo (see
+// Regression test for v105, the KAGE "Front Sight" logo (see
 // docs/CHANGELOG.md's v105 section):
 //   1) the header shows the KAGE wordmark (K, a flat-topped crossbar-less
 //      Lambda with an accent aiming dot, G, E) ahead of the unchanged
@@ -59,6 +59,7 @@ const readColours = () => {
       title: document.title,
       brandExists: !!brand,
       brandLabel: brand && brand.getAttribute('aria-label'),
+      brandIsLink: !!brand && brand.tagName === 'A' && !!brand.getAttribute('href') && brand.getAttribute('href') !== '#', // v109: links to KAGE home
       brandRole: brand && brand.getAttribute('role'),
       letters,
       polyPoints: brand && brand.querySelector('svg.tb-lam polygon').getAttribute('points'),
@@ -94,7 +95,7 @@ const readColours = () => {
   const touchFileExists = !!markup.touchHref && fs.existsSync(path.join(ROOT, markup.touchHref));
 
   const pass = markup.title === 'KAGE Shooting Map'
-    && markup.brandExists && markup.brandLabel === 'KAGE' && markup.brandRole === 'img'
+    && markup.brandExists && markup.brandLabel === 'KAGE home' && markup.brandRole === null && markup.brandIsLink
     && markup.letters === 'KΛGE'
     && markup.polyPoints === POLY && markup.dotAttrs === '40,51,9' // header-size optical tuning; masters use 40,50,7
     && markup.brandBeforeTitle

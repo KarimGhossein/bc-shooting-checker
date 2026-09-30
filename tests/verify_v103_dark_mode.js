@@ -9,7 +9,7 @@
 //   1) Header font: .tb-title moved off v102's italic Newsreader serif back
 //      to the app's own Hanken Grotesk sans, bold, non-italic. Nothing else
 //      that uses the .headline serif treatment (modal headings, the verdict
-//      headline) changed -- that wasn't what was asked.
+//      headline) changed, that wasn't what was asked.
 //   2) Dark/light mode: [data-theme] on <html>, set synchronously in a tiny
 //      inline <script> right after <title> (before first paint, avoiding a
 //      flash of the wrong theme), defaulting to dark unless a prior visit
@@ -40,7 +40,7 @@ async function newPage(browser){
   const browser = await chromium.launch(launchOpts());
   const errors = [];
 
-  // ---- Page 1: a completely fresh load, no localStorage at all -- must
+  // ---- Page 1: a completely fresh load, no localStorage at all, must
   // default to dark, with no flash (checked by reading the theme attribute
   // as early as possible, right after the head script runs and before the
   // rest of the page has necessarily finished). ----
@@ -60,13 +60,13 @@ async function newPage(browser){
       green: val('--green'), gray: val('--gray'), bg: val('--bg'),
       surface: val('--surface'), ink: val('--ink'), menuBg: val('--menu-bg'),
     };
-    // header title font -- "less fancy, more sleek and modern"
+    // header title font, "less fancy, more sleek and modern"
     const tb = getComputedStyle(document.querySelector('.tb-title'));
     out.tbTitleFont = tb.fontFamily;
     out.tbTitleStyle = tb.fontStyle;
     out.tbTitleWeight = tb.fontWeight;
     // the header's own colour is unchanged, and is exactly what dark mode's
-    // --menu-bg is defined to match -- compare normalized computed colours
+    // --menu-bg is defined to match, compare normalized computed colours
     // (a raw var() text value like "rgba(20,24,22,.72)" and its own
     // normalized computed form like "rgba(20, 24, 22, 0.72)" are the same
     // colour but different strings, so render --menu-bg onto a probe
@@ -86,7 +86,7 @@ async function newPage(browser){
     // the JS wires up is present
     out.themeToggleExists = !!document.getElementById('themeToggle');
     out.themeThumbExists = !!document.getElementById('themeThumb');
-    out.themeInfoBtnExists = !!document.getElementById('themeInfoBtn');
+    out.themeInfoBtnExists = !!document.getElementById('settingsDrawer').querySelector('#themeToggle'); // v109: the theme toggle lives in Settings, no separate info button
     const darkBtn = document.querySelector('.seg2-btn[data-theme-choice="dark"]');
     const lightBtn = document.querySelector('.seg2-btn[data-theme-choice="light"]');
     out.darkBtnActiveInitially = !!(darkBtn && darkBtn.classList.contains('active'));
@@ -120,7 +120,7 @@ async function newPage(browser){
   await page1.close();
 
   // ---- Page 2: localStorage pre-seeded with a saved "light" choice
-  // (simulating a returning visitor) -- must load straight into light,
+  // (simulating a returning visitor), must load straight into light,
   // with no flash, proving the head script actually reads the saved value
   // rather than only ever defaulting. ----
   const page2 = await newPage(browser);
@@ -149,7 +149,7 @@ async function newPage(browser){
       // i.e. immediately after <title>, or it can't beat first paint
       themeScriptBeforeFonts: html.indexOf("document.documentElement.dataset.theme") < html.indexOf('fonts.googleapis.com'),
       darkOverrideExists: /:root\[data-theme="dark"\]\{/.test(css),
-      // .headline / modal-head h3 / verdict-title untouched -- still serif
+      // .headline / modal-head h3 / verdict-title untouched, still serif
       headlineStillNewsreader: /\.headline\{font-family:"Newsreader"/.test(css),
       modalHeadStillNewsreader: /\.modal-head h3\{margin:0;font-family:"Newsreader"/.test(css),
       verdictTitleStillNewsreader: /\.verdict-title\{[^}]*font-family:"Newsreader"/.test(css),
@@ -171,8 +171,8 @@ async function newPage(browser){
     && fresh.toolsDrawerStillOpens === true
     // dark defaults match the app's expected dark palette
     && fresh.dark.accent === '#C9A56B' && fresh.dark.red === '#E0776A' && fresh.dark.amber === '#E0AC5C'
-    && fresh.dark.green === '#6FC08A' && fresh.dark.gray === '#ACB2AC' && fresh.dark.bg === '#0E1210'
-    && fresh.dark.menuBg === 'rgba(20,24,22,.72)'
+    && fresh.dark.green === '#6FC08A' && fresh.dark.gray === '#ACB2AC' && fresh.dark.bg === '#090C0A'
+    && fresh.dark.menuBg === 'rgba(12,15,13,.78)'
     // light values (captured after switching) match the app's light palette
     && fresh.light.accent === '#8A6632' && fresh.light.red === '#B5463B' && fresh.light.bg === '#F6F6F3'
     && fresh.light.menuBg === 'rgba(246,246,243,.72)'

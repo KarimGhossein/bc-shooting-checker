@@ -2,15 +2,15 @@
 // (after v92's config/*.js, v97's data/wfs.js, and v98's map/chooser.js) --
 // and the first of the plan's own multi-pass plan for map/render.js itself
 // ("report-click rendering, then Shooting Spots, then View Parcels/Reveal
-// Road -- not all at once"). This pass moves OVERLAY_CATEGORY_KEYS/
+// Road, not all at once"). This pass moves OVERLAY_CATEGORY_KEYS/
 // overlayCategoryLayers, renderForestServiceRoads(), renderMapOverlays(),
 // and cutblockColor()/cutblockStyle()/cutblockHighlightStyle() to
 // src/map/render.js, loaded as a plain classic <script src> (not an ES
-// module -- see that file's own top comment, and docs/PLAN.md's "Why
+// module, see that file's own top comment, and docs/PLAN.md's "Why
 // classic scripts" section, for why).
 //
 // Like v98's chooser.js, this file is loaded *before* the main inline
-// script creates `map` -- so, same as verify_v98_chooser_split.js, this
+// script creates `map`, so, same as verify_v98_chooser_split.js, this
 // test's real value is confirming the split didn't just "not throw yet"
 // but actually still works when renderMapOverlays() is called for real
 // (which only happens after `map` exists, well after chooser.js/render.js
@@ -18,7 +18,7 @@
 //
 // Existing tests already exercise renderMapOverlays() end-to-end far more
 // thoroughly than this file attempts to (verify_v79, verify_v81, the
-// verify_v82_* family, verify_v83, verify_v91) -- this test instead
+// verify_v82_* family, verify_v83, verify_v91), this test instead
 // confirms the *split itself* took cleanly, the same way
 // verify_v92_config_split.js / verify_v97_wfs_split.js /
 // verify_v98_chooser_split.js do for their own slices. All of those
@@ -67,12 +67,12 @@ const ROOT = path.resolve(__dirname, '..');
     out.highlightStyleSample = cutblockHighlightStyle('#2f9e44');
 
     // Functional check: actually call renderMapOverlays() with a real
-    // parcel result and confirm it runs to completion (no throw -- the
+    // parcel result and confirm it runs to completion (no throw, the
     // leaflet-stub's L.geoJSON()/L.layerGroup() are the generic chainable
     // Proxy, not real shape-tracking objects, so this can't check what got
     // *drawn*, but it can and does check the real, plain-array chooser
     // state render.js hands off to chooser.js) and registers the feature
-    // with the shared chooser (src/map/chooser.js) -- exercising the exact
+    // with the shared chooser (src/map/chooser.js), exercising the exact
     // cross-file call chain (render.js -> chooser.js's pushClickable/
     // resetClickableSource/openNearbyFeaturesPopupAt, and render.js ->
     // map.fitBounds) that would break if load order or scoping were wrong,
@@ -127,7 +127,7 @@ const ROOT = path.resolve(__dirname, '..');
       inlineHasCutblockColor: /\bfunction cutblockColor\(/.test(inline),
       inlineHasCutblockStyle: /\bfunction cutblockStyle\(/.test(inline),
       inlineHasCutblockHighlightStyle: /\bfunction cutblockHighlightStyle\(/.test(inline),
-      // Out-of-scope for this slice -- must still be inline.
+      // Out-of-scope for this slice, must still be inline.
       inlineHasOverlayLayer: /\bconst overlayLayer\s*=\s*L\.layerGroup\(\)\.addTo\(map\)/.test(inline),
       inlineHasParcelPopup: /\bfunction parcelPopup\(/.test(inline),
       renderFileHasAll: [
@@ -139,7 +139,7 @@ const ROOT = path.resolve(__dirname, '..');
   })();
 
   const pass = results.overlayCategoryKeysType === 'array'
-    && results.overlayCategoryKeysLen === 10
+    && results.overlayCategoryKeysLen === 11 // v109: + mu
     && results.overlayCategoryLayersType === 'object'
     && results.renderForestServiceRoadsType === 'function'
     && results.renderMapOverlaysType === 'function'

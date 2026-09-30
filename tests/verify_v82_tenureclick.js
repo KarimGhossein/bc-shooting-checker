@@ -26,9 +26,9 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     const inside = featureNearPoint(entry, { lat: 51.5, lng: -122.5 }, 10, 10); // dead center
     // A point ~5m outside the west edge (edge is at lng -122.5013, ~1 degree lng =~ 70000m at this lat, so 0.00005 deg =~ 3.5m)
     const justOutside = featureNearPoint(entry, { lat: 51.5, lng: -122.5013 - 0.00005 }, 10, 10);
-    // A point ~50m outside -- beyond a 10m tolerance
+    // A point ~50m outside, beyond a 10m tolerance
     const farOutside = featureNearPoint(entry, { lat: 51.5, lng: -122.5013 - 0.0007 }, 10, 10);
-    // Same near-boundary point but with a 0 tolerance -- should NOT match (sanity: tolerance is doing the work)
+    // Same near-boundary point but with a 0 tolerance, should NOT match (sanity: tolerance is doing the work)
     const justOutsideZeroTol = featureNearPoint(entry, { lat: 51.5, lng: -122.5013 - 0.00005 }, 0, 0);
 
     return { inside, justOutside, farOutside, justOutsideZeroTol };

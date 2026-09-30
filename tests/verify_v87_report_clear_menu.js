@@ -3,21 +3,21 @@
 //
 // 1) The Clear dropdown now lists one item per *report* category (Parcel,
 //    Municipal Boundary, Bylaw Lookup, Park, WMA, Recreation, Motor Vehicle
-//    Closures, Forestry, Crown Land Tenures, Woodlot, Road Access -- the 11
+//    Closures, Forestry, Crown Land Tenures, Woodlot, Road Access, the 11
 //    renderReport() pushCard() keys), not the three Mapping Functions
 //    buttons v86 mistakenly used. Clearing one category removes just that
 //    category's map shapes (overlayCategoryLayers[key]) and its own report
 //    card (#card-<key>), leaving every other category, the pin, and the
 //    rest of the report untouched.
 // 2) runPotentialSpotsSearch() no longer force-opens the Tools drawer
-//    (openToolsDrawer() removed entirely, now dead code) -- Karim reported
+//    (openToolsDrawer() removed entirely, now dead code), Karim reported
 //    the progress bar popping the drawer open on a plain map click, before
 //    he'd pressed anything in it, as showing up on its own.
 //
 // See docs/CHANGELOG.md's v87 section for the full root-cause writeup.
 //
 // v101 update: the dropdown gained three more items ahead of the 11 report
-// categories -- parcelview/spots/roadview, one per Mapping Functions layer
+// categories, parcelview/spots/roadview, one per Mapping Functions layer
 // (View Parcels/Shooting Spots/Reveal Road), added so every layer shown on
 // the map has a Clear option, not just the single-click report's own
 // categories. The menuKeys assertion below is updated to expect those three
@@ -52,7 +52,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     out.oldMappingFnItemsGone = !document.getElementById('clearParcelsBtn') && !document.getElementById('clearSpotsMenuBtn') && !document.getElementById('clearRoadMenuBtn') && !document.getElementById('clearLocationBtn');
     const menuKeys = Array.from(document.querySelectorAll('#clearMenu .clear-menu-item')).map(b => b.dataset.key);
     out.menuKeys = menuKeys;
-    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcelview','spots','roadview','parcel','municipality','bylaw','park','wma','recreation','mvpr','cutblocks','tenures','woodlot','road']);
+    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcelview','spots','roadview','parcel','municipality','bylaw','park','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road']);
 
     // Build a real report + real map shapes for two categories (tenures,
     // park) via the same functions runLookup() calls, exactly like
@@ -85,7 +85,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
       categoryGroupsCreated: OVERLAY_CATEGORY_KEYS.every(k => !!overlayCategoryLayers[k]),
     };
 
-    // Swap in spies for clearLayers() before clearing -- the network-stubbed
+    // Swap in spies for clearLayers() before clearing, the network-stubbed
     // Leaflet (leaflet-stub.js) is a generic chainable Proxy with no real
     // add/clear/getLayers tracking (see its own top comment), so shape
     // *counts* can't be asserted against directly; this instead confirms
@@ -96,9 +96,9 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     overlayCategoryLayers.park = { clearLayers(){ parkCleared = true; } };
 
     // Clearing "tenures" only should drop its card + chooser entries and
-    // call clearLayers() on its own group -- leaving "park" (and the
+    // call clearLayers() on its own group, leaving "park" (and the
     // pin/marker) completely alone.
-    clearReportCategory('tenures', '📜 Crown Land Tenures');
+    clearReportCategory('tenures', 'Crown Land Tenures');
 
     out.afterClear = {
       tenuresCardExists: !!document.getElementById('card-tenures'),
@@ -113,7 +113,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     // A category with nothing to clear (bylaw wasn't rendered in this fake
     // report) should be a harmless no-op, not throw.
     let bylawThrew = false;
-    try { clearReportCategory('bylaw', '📜 Bylaw Lookup'); } catch (e) { bylawThrew = true; }
+    try { clearReportCategory('bylaw', 'Bylaw Lookup'); } catch (e) { bylawThrew = true; }
     out.emptyCategoryIsHarmless = !bylawThrew;
 
     // ---- 2) Tools drawer no longer force-opened by the automatic sweep ----
@@ -123,7 +123,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     // The drawer must stay closed after the point in runLookup() that used
     // to force it open (revealPotentialSpotsAroundPin's own network calls
     // aren't stubbed here, so this checks the specific call site is gone
-    // from source instead of running the whole async flow -- same approach
+    // from source instead of running the whole async flow, same approach
     // verify_v85's zoom-gated check already uses for the same reason).
     out.toolsDrawerStaysClosed = document.getElementById('toolsDrawer').classList.contains('open') === false;
 

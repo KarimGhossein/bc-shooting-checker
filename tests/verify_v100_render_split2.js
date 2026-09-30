@@ -1,13 +1,13 @@
 // Regression test for v100: pass 2 of docs/PLAN.md's map/render.js split
-// (after v99's pass 1, the single-click report renderer) -- Shooting Spots.
+// (after v99's pass 1, the single-click report renderer), Shooting Spots.
 // Moved to src/map/render.js: renderActiveCutblockOutlines(),
 // renderActiveCutblockBuffers(), renderNearbyRoads(), their small dedicated
 // helpers (activeCutblockPopup, bboxToBoundsLike, cutblockBufferStyle,
 // cutblockBufferOutlineStyle, neighborPoint, squareEdgeSegment,
 // DRA_ROAD_COLOR/DRA_ROAD_SPECIAL_COLOR/draRoadStyle/draRoadTooltip,
 // SPOT_MIN_ZOOM/INFRA_MIN_ZOOM, startSpotsProgress/trackSpotsProgress/
-// endSpotsProgress, spotSeq), and -- per this slice's own scope-correction
-// writeup in src/map/render.js's top comment -- runPotentialSpotsSearch()
+// endSpotsProgress, spotSeq), and, per this slice's own scope-correction
+// writeup in src/map/render.js's top comment, runPotentialSpotsSearch()
 // itself plus its two callers revealPotentialSpots()/
 // revealPotentialSpotsAroundPin(), since the two "reveal" functions turned
 // out to be thin wrappers around that one shared engine rather than doing
@@ -22,11 +22,11 @@
 // Unlike v99's test (which could exercise renderMapOverlays() directly with
 // already-fetched fake data), runPotentialSpotsSearch() fires ~10 concurrent
 // WFS/Overpass queries itself via queryLayer()/queryOsmBuildings() (both
-// already covered by their own src/data/wfs.js split, v97) -- so this test
+// already covered by their own src/data/wfs.js split, v97), so this test
 // stubs those two hosts at the network level (page.route, same technique
 // already used here for cdnjs/fonts) and calls revealPotentialSpotsAroundPin()
 // for real, end-to-end, the strongest possible proof this pass's split
-// didn't just "not throw yet" but the whole call chain -- wrapper -> engine
+// didn't just "not throw yet" but the whole call chain, wrapper -> engine
 // -> the three moved render functions -> the chooser (src/map/chooser.js) --
 // actually still works.
 const { chromium } = require('playwright');
@@ -51,7 +51,7 @@ const ROOT = path.resolve(__dirname, '..');
   // Every WFS layer query runPotentialSpotsSearch() fires (parcels x2, parks,
   // municipalities, tenures, woodlots, cutblocks, active cutting permits,
   // DRA roads) goes through queryLayer() -> wfsUrl() -> this host. Return an
-  // empty-but-valid FeatureCollection for all of them -- this test cares
+  // empty-but-valid FeatureCollection for all of them, this test cares
   // whether the split's call chain runs to completion and wires up the
   // chooser correctly, not about exercising the real classification logic
   // (already covered by this repo's pre-split verify_v4x-v7x scripts).
@@ -134,7 +134,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.chooserRegisteredRoad = currentClickableFeatures.some(f => f.source === 'spots' && f.rowLabel && f.rowLabel.includes('Road'));
     resetClickableSource('spots'); // leave no test residue behind
 
-    // ---- functional check 3: the real thing -- call
+    // ---- functional check 3: the real thing, call
     // revealPotentialSpotsAroundPin() end-to-end (network-stubbed WFS +
     // Overpass, see the routes registered above) and confirm the whole
     // wrapper -> runPotentialSpotsSearch() -> render chain completes,
@@ -184,7 +184,7 @@ const ROOT = path.resolve(__dirname, '..');
       inlineHasRevealPotentialSpotsAroundPin: /\basync function revealPotentialSpotsAroundPin\(/.test(inline),
       inlineHasSpotSeqDecl: /\blet spotSeq\s*=/.test(inline),
       inlineHasStartSpotsProgress: /\bfunction startSpotsProgress\(/.test(inline),
-      // Out-of-scope for this slice -- must still be inline.
+      // Out-of-scope for this slice, must still be inline.
       inlineHasSpotLayer: /\bconst spotLayer\s*=\s*L\.layerGroup\(\)\.addTo\(map\)/.test(inline),
       inlineHasCutblockFeatureLabel: /\bfunction cutblockFeatureLabel\(/.test(inline),
       inlineHasCutblockWarnDistance: /\bconst CUTBLOCK_WARN_DISTANCE_M\s*=/.test(inline),

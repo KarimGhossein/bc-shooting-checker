@@ -1,20 +1,20 @@
 // Regression test for v96's other two changes (the leaflet.draw "Clear
 // All" removal itself is covered separately, as a plain Node test, in
-// tests/verify_v96_leafletdraw_clearall.js -- see that file's own comment
+// tests/verify_v96_leafletdraw_clearall.js, see that file's own comment
 // for why: the network-stubbed leaflet-stub.js used here has no real
 // L.EditToolbar to test that patch against):
 //
-// 1) v95 removed the Tools drawer's "Clear ▾" dropdown by mistake -- Karim
+// 1) v95 removed the Tools drawer's "Clear ▾" dropdown by mistake, Karim
 //    clarified afterward that he meant a completely different thing (see
 //    #2 below and verify_v96_leafletdraw_clearall.js). This confirms it's
 //    back in full: same button, same 11 report-category menu items.
-//    (v101 update: the dropdown gained 3 more items -- parcelview/spots/
-//    roadview, one per Mapping Functions layer -- so the item count check
+//    (v101 update: the dropdown gained 3 more items, parcelview/spots/
+//    roadview, one per Mapping Functions layer, so the item count check
 //    below expects 14, not 11; see docs/CHANGELOG.md's v101 section.)
 //
 // 2) The #mapActionsNote status card under the Mapping Functions buttons
 //    used to render as a bordered, padded, visually empty box before any
-//    button had been pressed -- "that blank container under reveal road
+//    button had been pressed, "that blank container under reveal road
 //    should not be there. It should only be present if there is
 //    information inside of it". Fixed with a CSS-only
 //    `.td-status:has(#mapActionsNote:empty){display:none}` rule.
@@ -40,23 +40,28 @@ const ROOT = path.resolve(__dirname, '..');
   await page.goto('file://' + path.join(ROOT, 'index.html'), { waitUntil: 'load', timeout: 60000 });
   await page.waitForTimeout(800);
 
-  const results = await page.evaluate(() => {
+  const results = await page.evaluate(async () => {
     const out = {};
 
     // ---- Clear ▾ dropdown restored ----
     out.clearMenuBtnRestored = !!document.getElementById('clearMenuBtn');
     out.clearMenuRestored = !!document.getElementById('clearMenu');
-    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item').length === 14;
+    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item').length === 15;
 
-    // ---- empty status-note card hidden until populated ----
-    const statusCard = document.getElementById('mapActionsNote').closest('.td-status');
-    out.statusCardExists = !!statusCard;
-    out.hiddenWhenEmpty = getComputedStyle(statusCard).display === 'none';
-    document.getElementById('mapActionsNote').textContent = 'Parcels drawn.';
-    out.visibleWhenPopulated = getComputedStyle(statusCard).display !== 'none';
-    document.getElementById('mapActionsNote').textContent = ''; // what a fresh page load looks like
-    out.hiddenAgainWhenClearedBackToEmpty = getComputedStyle(statusCard).display === 'none';
-
+    // ---- v109: the note is a status toast under the search bar: hidden
+    // while empty, replaces the search status when text arrives, fades
+    // out after STATUS_TOAST_MS ----
+    const note = document.getElementById('mapActionsNote');
+    const wrap = note.closest('.tb-status-wrap');
+    out.statusCardExists = !!wrap;
+    out.hiddenWhenEmpty = getComputedStyle(note).display === 'none';
+    note.textContent = 'Parcels drawn.';
+    await new Promise(r => setTimeout(r, 120));
+    out.visibleWhenPopulated = getComputedStyle(note).display !== 'none' && note.classList.contains('show')
+      && getComputedStyle(document.getElementById('searchStatus')).display === 'none';
+    await new Promise(r => setTimeout(r, STATUS_TOAST_MS + 900));
+    out.hiddenAgainWhenClearedBackToEmpty = !wrap.classList.contains('toast-on') && getComputedStyle(note).display === 'none'
+      && getComputedStyle(document.getElementById('searchStatus')).display !== 'none';
     return out;
   });
 

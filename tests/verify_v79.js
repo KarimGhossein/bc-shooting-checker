@@ -44,7 +44,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     // click at its center should be an ambiguous 2-match case (polygon
     // hit-testing is tolerance-independent, so this is reliable in this
     // network-stubbed environment even though real pixel<->meters conversion
-    // isn't -- see the note in the verification writeup).
+    // isn't, see the note in the verification writeup).
     const overlapSquare = { type: 'Polygon', coordinates: [[[-122.51, 51.49], [-122.49, 51.49], [-122.49, 51.51], [-122.51, 51.51], [-122.51, 51.49]]] };
     const woodlotSquare = { type: 'Polygon', coordinates: [[[-123.01, 52.09], [-122.99, 52.09], [-122.99, 52.11], [-123.01, 52.11], [-123.01, 52.09]]] };
     const roadLine = { type: 'LineString', coordinates: [[-121.5, 50.5], [-121.4, 50.6]] };
@@ -74,7 +74,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
 
   // ===== 3. openNearbyFeaturesPopupAt() end-to-end: ambiguous polygon overlap =====
   results.overlapClick = await page.evaluate(() => {
-    openNearbyFeaturesPopupAt({ lat: 51.5, lng: -122.5 }); // center of overlapSquare -- tenure + parcel + cutblock all here
+    openNearbyFeaturesPopupAt({ lat: 51.5, lng: -122.5 }); // center of overlapSquare, tenure + parcel + cutblock all here
     const matches = currentNearbyMatches.map(m => ({ icon: m.icon, rowLabel: m.rowLabel, title: m.title }));
     return { matchCount: currentNearbyMatches.length, matches };
   });
@@ -91,11 +91,11 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
 
   // ===== 4. Single-match case (no overlap) still works, unambiguous =====
   results.singleMatch = await page.evaluate(() => {
-    // woodlotSquare center -- only woodlot + municipality + WMA live there (all
+    // woodlotSquare center, only woodlot + municipality + WMA live there (all
     // three polygons share that square in this synthetic setup) so pick a
     // spot with just one: use featureNearPoint directly against a lone probe
     // point that's only inside the recSitePoint's tolerance-independent test
-    // isn't applicable (points need tolerance) -- so verify via the woodlot
+    // isn't applicable (points need tolerance), so verify via the woodlot
     // square instead, and just confirm the call doesn't throw and returns
     // a real multi-or-single count via the same dispatch openNearbyFeaturesPopupAt uses.
     const before = currentNearbyMatches.length;

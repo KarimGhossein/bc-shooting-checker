@@ -1,4 +1,4 @@
-// Regression test for v108 -- the map overlay style system (see
+// Regression test for v108, the map overlay style system (see
 // docs/CHANGELOG.md's v108 section and src/config/mapstyle.js).
 // Guards the rules the redesign depends on, so later changes can't quietly
 // drift back to one-off colours:
@@ -68,7 +68,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.controlsThemed = /#map \.leaflet-bar a\s*\{[^}]*var\(--menu-bg\)/.test(css) && /leaflet-control-attribution\s*\{[^}]*var\(--surface\)/.test(css);
     out.spotSolid = !('dashArray' in spotStyle()) ;
     out.restrictedFill = restrictedStyle().fillOpacity;
-    out.gapDash = gapStyle().dashArray === MAP_DASH;
+    out.gapDash = gapOutlineStyle().dashArray === MAP_DASH && !gapStyle().dashArray && gapStyle().opacity <= 0.25; // v109: faint cell edges, dashed outline around the region
     return out;
   });
 
@@ -86,7 +86,7 @@ const ROOT = path.resolve(__dirname, '..');
 
   const pass = live.order.style !== -1 && live.order.style < live.order.render && live.order.render < live.order.main
     && live.globals === 'object,object,string,object' && live.hitFill > 0
-    && live.legendCount === 28 && live.legendNotInPalette.length === 0
+    && live.legendCount === 29 && live.legendNotInPalette.length === 0
     && live.pinIcon && live.chooserBronze && live.mapBase === 'satellite'
     && live.casingCss && live.casingFilters && live.casingThreshold > Math.max(...Object.values(MAP_FILL_FOR_TEST)) && live.casingThreshold > 1 - Math.pow(1 - 0.24, 3) && live.zoomAnimOff && live.popupThemed && live.pinCss && live.controlsThemed
     && live.spotSolid && live.restrictedFill < 0.4 && live.gapDash

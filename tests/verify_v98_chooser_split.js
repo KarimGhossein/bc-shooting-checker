@@ -1,14 +1,14 @@
 // Regression test for v98: the third slice of docs/PLAN.md's module split
-// (after v92's config/*.js and v97's data/wfs.js) -- currentClickableFeatures/
+// (after v92's config/*.js and v97's data/wfs.js), currentClickableFeatures/
 // currentPushSource/currentNearbyMatches, resetClickableSource(),
 // pushClickable(), pixelToleranceMeters(), the two NEARBY_CLICK_*_TOLERANCE_PX
 // constants, featureNearPoint(), openNearbyFeaturesPopupAt(), and
 // showNearbyFeatureDetail() moved to src/map/chooser.js, loaded as a plain
-// classic <script src> (not an ES module -- see that file's own top comment,
+// classic <script src> (not an ES module, see that file's own top comment,
 // and docs/PLAN.md's "Why classic scripts" section, for why).
 //
 // This is also the first module-split slice whose own top-level code would
-// break if it were loaded in the wrong place relative to `map` -- unlike
+// break if it were loaded in the wrong place relative to `map`, unlike
 // config/*.js and data/wfs.js, chooser.js is loaded *before* the main inline
 // script creates `map`, so this test's functional checks (which call
 // openNearbyFeaturesPopupAt(), which calls pixelToleranceMeters(), which
@@ -22,7 +22,7 @@
 // chooser docs/PLAN.md called out as this file's "best test coverage");
 // this test instead confirms the *split itself* took cleanly, the same way
 // verify_v92_config_split.js and verify_v97_wfs_split.js do for their own
-// slices -- so a regression here would mean the extraction broke something
+// slices, so a regression here would mean the extraction broke something
 // v79/v83 don't happen to cover, not that the feature itself misbehaves.
 const { chromium } = require('playwright');
 const { launchOpts } = require('./launch');
@@ -60,7 +60,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.openNearbyFeaturesPopupAtType = typeof openNearbyFeaturesPopupAt;
     out.showNearbyFeatureDetailType = typeof showNearbyFeatureDetail;
 
-    // Still inline, out of scope for this slice -- confirm they weren't
+    // Still inline, out of scope for this slice, confirm they weren't
     // accidentally dropped along with everything else (see chooser.js's own
     // scope note for why they couldn't move: their top-level init needs
     // `map`, which doesn't exist yet when chooser.js itself loads).
@@ -71,20 +71,20 @@ const ROOT = path.resolve(__dirname, '..');
     // real pushClickable()/resetClickableSource() and confirm
     // openNearbyFeaturesPopupAt() actually produces a 2-record chooser at
     // their shared point, and a single-feature click gets that feature's
-    // own popup content directly -- exercising the exact call chain that
+    // own popup content directly, exercising the exact call chain that
     // would break if `map` weren't already defined by the time these run.
     resetClickableSource('test-slice');
     const pt = L.latLng(49.28, -123.12);
-    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '📍', 'Feature A', 'Title A', '<b>A</b>');
-    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '📍', 'Feature B', 'Title B', '<b>B</b>');
+    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '', 'Feature A', 'Title A', '<b>A</b>');
+    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '', 'Feature B', 'Title B', '<b>B</b>');
     out.registeredCount = currentClickableFeatures.filter(f => f.source === 'test-slice').length;
     openNearbyFeaturesPopupAt(pt);
     out.chooserMatchCount = currentNearbyMatches.length;
 
     resetClickableSource('test-slice');
-    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '📍', 'Feature Solo', 'Title Solo', '<b>solo content</b>');
+    pushClickable({type:'Point', coordinates:[-123.12, 49.28]}, '', 'Feature Solo', 'Title Solo', '<b>solo content</b>');
     // Single match shouldn't touch currentNearbyMatches (that's only set in
-    // the 2+ branch) -- reset it first so this check is meaningful.
+    // the 2+ branch), reset it first so this check is meaningful.
     currentNearbyMatches = [];
     openNearbyFeaturesPopupAt(pt);
     out.soloLeftMatchesEmpty = currentNearbyMatches.length === 0;
@@ -120,7 +120,7 @@ const ROOT = path.resolve(__dirname, '..');
       inlineHasFeatureNearPoint: /\bfunction featureNearPoint\(/.test(inline),
       inlineHasOpenNearbyFeaturesPopupAt: /\bfunction openNearbyFeaturesPopupAt\(/.test(inline),
       inlineHasShowNearbyFeatureDetail: /\bfunction showNearbyFeatureDetail\(/.test(inline),
-      // Out-of-scope for this slice -- must still be inline.
+      // Out-of-scope for this slice, must still be inline.
       inlineHasChooserHighlightLayer: /\bconst chooserHighlightLayer\s*=\s*L\.layerGroup\(\)\.addTo\(map\)/.test(inline),
       inlineHasHighlightNearbyMatch: /\bfunction highlightNearbyMatch\(/.test(inline),
       chooserFileHasAll: [

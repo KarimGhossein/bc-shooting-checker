@@ -42,7 +42,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     };
   });
 
-  // Single-match case (nothing else at this spot) -- parcel alone still works cleanly
+  // Single-match case (nothing else at this spot), parcel alone still works cleanly
   results.singleParcelOnly = await page.evaluate(() => {
     const solo = { type: 'Polygon', coordinates: [[[-99, 40], [-98, 40], [-98, 41], [-99, 41], [-99, 40]]] };
     renderMapOverlays({
@@ -54,7 +54,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     });
     const before = currentNearbyMatches.length;
     openNearbyFeaturesPopupAt({ lat: 40.5, lng: -98.5 });
-    // single match doesn't reassign currentNearbyMatches -- verify via direct filter matching internal logic
+    // single match doesn't reassign currentNearbyMatches, verify via direct filter matching internal logic
     const directMatches = currentClickableFeatures.filter(f => featureNearPoint(f, { lat: 40.5, lng: -98.5 }, 10, 10));
     return { registeredCount: currentClickableFeatures.length, directMatchCount: directMatches.length, icon: directMatches[0] ? directMatches[0].icon : null };
   });

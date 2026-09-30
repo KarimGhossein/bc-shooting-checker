@@ -1,4 +1,4 @@
-// v108: the map's visual style system -- one place for every overlay colour,
+// v108: the map's visual style system, one place for every overlay colour,
 // line weight, dash pattern and fill level, replacing ~20 hardcoded hex
 // values and 7 dash patterns that had accumulated one layer at a time (each
 // picked to be "distinct from every other colour", never as a set).
@@ -12,7 +12,7 @@
 //   clear / no data) keep the exact meanings the app has always used; every
 //   data layer gets one muted colour. All colours sit in a matched mid-tone
 //   band (roughly 2-3:1 contrast against BOTH dark satellite imagery and the
-//   light street/topo basemaps -- checked numerically, not by eye), so none
+//   light street/topo basemaps, checked numerically, not by eye), so none
 //   vanishes on one basemap and shouts on another.
 // - Edge contrast comes from a thin dark "casing" drawn around every overlay
 //   by CSS (see .leaflet-overlay-pane svg in index.html), not from
@@ -35,6 +35,7 @@ const MAP_PAL = {
   municipal:   "#B874B8",
   tenure:      "#4FA0CC",
   woodlot:     "#9BA84F",
+  mu:          "#E4DDCB", // v109: management unit boundary, a pale warm line; large and always present, so it stays quiet
   wma:         "#C4A52A", // gold, not orange: orange belongs to the highway line (they were near-identical, 24 vs 20 degrees hue); deep enough to read on the light street map
   fsrActive:   "#D8A755",
   fsrRetired:  "#A3957A", // greyed tan: same family as active FSR (reads as "faded"), and kept apart from the grey public-road line
@@ -54,6 +55,6 @@ const MAP_PAL = {
 const MAP_W = { hair: 1, line: 1.5, strong: 2.25, road: 2.5 };
 const MAP_DASH = "5 4";
 // hit: the minimum fill that still lets a click inside an outline-only
-// shape register (v81 -- an unfilled SVG interior never receives clicks),
+// shape register (v81, an unfilled SVG interior never receives clicks),
 // so outline-only layers keep this instead of 0.
 const MAP_FILL = { hit: 0.03, faint: 0.05, area: 0.12, emphasis: 0.18, strong: 0.24 };

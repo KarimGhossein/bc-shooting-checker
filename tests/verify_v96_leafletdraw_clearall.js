@@ -1,8 +1,8 @@
-// Regression test for v96's leaflet.draw "Clear All" fix -- a plain Node
+// Regression test for v96's leaflet.draw "Clear All" fix, a plain Node
 // test (no browser needed), because the app's own network-stubbed
 // leaflet-stub.js (used by every Playwright test in this suite) is a
 // generic chainable Proxy with no real L.EditToolbar class to patch against
-// -- see that file's own top comment. Testing the patch logic for real
+//, see that file's own top comment. Testing the patch logic for real
 // needs a stand-in L.EditToolbar that actually behaves like leaflet-draw
 // v1.0.4's real one (verbatim from its own src/edit/EditToolbar.js
 // getActions(), fetched directly from the library's GitHub source, not
@@ -10,13 +10,13 @@
 //
 // Root problem this guards against: leaflet.draw's delete-mode ("trash
 // can", top-left of the map) action popout normally offers Save, Cancel,
-// and "Clear All" -- L.EditToolbar.getActions() adds "Clear All" whenever
+// and "Clear All", L.EditToolbar.getActions() adds "Clear All" whenever
 // the active handler defines removeAllLayers(), which only
 // L.EditToolbar.Delete does. That's a one-click, no-confirmation wipe of
 // every pin/line/area in "My Markup" sitting right next to "Cancel" --
 // Karim asked for it removed ("remove the 'Clear all' button that's live
 // in the pop out menu from the trash can icon on the left side of the
-// app" -- explicitly NOT the Tools drawer's "Clear ▾" dropdown, which v95
+// app", explicitly NOT the Tools drawer's "Clear ▾" dropdown, which v95
 // mistakenly removed instead and this version restores in full).
 //
 // Fix: index.html patches L.EditToolbar.prototype.getActions to filter out
@@ -32,7 +32,7 @@ const ROOT = path.resolve(__dirname, '..');
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
   // Extract the exact patch block from index.html rather than
-  // re-transcribing it here -- so this test fails loudly if that block is
+  // re-transcribing it here, so this test fails loudly if that block is
   // ever edited in a way that breaks the extraction (e.g. the guard
   // comment or variable names change), instead of silently testing a stale
   // copy of logic the app no longer runs.
@@ -87,7 +87,7 @@ const ROOT = path.resolve(__dirname, '..');
     deleteKeepsCancel: deleteActions.some(a => a.text === 'Cancel'),
     deleteLosesClearAll: !deleteActions.some(a => a.text === 'Clear All'),
     // Sanity check: without the patch, the real library WOULD have shown
-    // Clear All for the delete handler -- confirms this test scenario is
+    // Clear All for the delete handler, confirms this test scenario is
     // the real one leaflet-draw produces, not an accidental no-op. Calls
     // the pre-patch function directly (not through the now-patched
     // prototype, which shares the same object the patch just rewrote).

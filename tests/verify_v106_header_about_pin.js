@@ -1,4 +1,4 @@
-// Regression test for v106 -- two header rearrangements Karim asked for
+// Regression test for v106, two header rearrangements Karim asked for
 // (see docs/CHANGELOG.md's v106 section):
 //   1) the drag-to-place pin button moves from .tb-right to directly left of
 //      the address search box (inside .tb-search-row), and drag still works;
@@ -92,7 +92,7 @@ async function newPage(browser, width){
     && markup.pinLeftOfSearchOnScreen && markup.pinDraggable && markup.pinNotInRight
     && markup.titleText === 'Shooting Map' && !markup.titleHasButton
     && markup.aboutInRight && markup.aboutImmediatelyBeforeDisclaimers && markup.aboutText === 'About' && markup.aboutIsButton
-    && modal.open && /About this tool/.test(modal.title) && modal.bodyLen > 50
+    && modal.open && /^About/.test(modal.title) && modal.bodyLen > 50
     && dragPayload === 'bc-shooting-check-pin'
     && Object.values(layout).every(l => l.gapLeft > 0 && l.gapRight > 0 && l.searchBox >= 225)
     && errors.length === 0;

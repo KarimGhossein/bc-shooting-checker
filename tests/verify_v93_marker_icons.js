@@ -4,7 +4,7 @@
 // rendered <div>+<svg> markup via markupPinIcon()/markupIconSvg(), the
 // editor modal's icon picker (built from data, one "None" button plus one
 // per icon grouped by category, hidden entirely for lines/areas since only
-// markers render an icon), the save round-trip, and -- most importantly --
+// markers render an icon), the save round-trip, and, most importantly --
 // backward/forward compatibility of the additive `icon` GeoJSON property:
 // a file exported by any pre-v93 version of this app (no `icon` key at all)
 // must still import as a plain, icon-less pin exactly as it did before this
@@ -67,11 +67,11 @@ const ROOT = path.resolve(__dirname, '..');
     out.svgForNoIcon = markupIconSvg(null);
     out.svgForNoIconEmpty = out.svgForNoIcon === '';
 
-    // Capture what markupPinIcon() actually hands to L.divIcon -- the
+    // Capture what markupPinIcon() actually hands to L.divIcon, the
     // network-stubbed L is a generic chainable Proxy whose own `get` trap
     // always returns a fresh chain object regardless of what's assigned
-    // onto it directly (`L.divIcon = fn` doesn't stick), so -- same as
-    // v89/v91's tests wrapping window.L to capture L.popup() -- wrap the
+    // onto it directly (`L.divIcon = fn` doesn't stick), so, same as
+    // v89/v91's tests wrapping window.L to capture L.popup(), wrap the
     // whole global with a Proxy that intercepts just this one property.
     const realL = window.L;
     function withCapturedDivIcon(fn){
@@ -97,7 +97,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.item1Icon = m1.icon;
     const m2 = addMarkupItem(L.marker([51.5, -122.5]), 'marker', { icon: 'totally-bogus' });
     out.item2IconFallback = m2.icon; // must degrade to null, not throw or keep the bogus id
-    const m3 = addMarkupItem(L.marker([51.5, -122.5]), 'marker', {}); // no icon opt at all -- default behaviour unchanged
+    const m3 = addMarkupItem(L.marker([51.5, -122.5]), 'marker', {}); // no icon opt at all, default behaviour unchanged
     out.item3IconDefault = m3.icon;
     const lineItem = addMarkupItem(L.polyline([[51.5,-122.5],[51.51,-122.51]]), 'polyline', { icon: 'flag' });
     out.lineIconIgnored = lineItem.icon; // lines never render an icon regardless of what's passed
@@ -108,7 +108,7 @@ const ROOT = path.resolve(__dirname, '..');
 
     // Backward compatibility: a feature with no `icon` key at all (every
     // file exported before v93) must import as icon:null, exactly like a
-    // brand-new plain pin -- not throw, not leave `icon` undefined in a way
+    // brand-new plain pin, not throw, not leave `icon` undefined in a way
     // that later code has to special-case.
     const preV93Feature = {
       type: 'Feature',
@@ -140,14 +140,14 @@ const ROOT = path.resolve(__dirname, '..');
     out.pickerHasNone = iconButtons.some(b => b.classList.contains('mf-icon-none') && b.dataset.icon === '');
     out.pickerGroupCount = document.querySelectorAll('#markupIconRow .mf-icon-group-label').length;
 
-    // Open editor for a marker with an icon -- picker section visible,
+    // Open editor for a marker with an icon, picker section visible,
     // correct button pre-selected.
     openMarkupEditor(m1.id);
     out.sectionVisibleForMarker = document.getElementById('markupIconSection').style.display !== 'none';
     const selectedBtn = document.querySelector('#markupIconRow .mf-icon-btn.sel');
     out.preselectedMatchesItem = !!selectedBtn && selectedBtn.dataset.icon === 'tent';
 
-    // Simulate picking a different icon, then Save -- item.icon must update
+    // Simulate picking a different icon, then Save, item.icon must update
     // and the marker's rendered icon must be restyled.
     const starBtn = document.querySelector('#markupIconRow .mf-icon-btn[data-icon="star"]');
     starBtn.click();
@@ -155,7 +155,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.savedIcon = m1.icon;
     out.restyledPinHasNewIcon = /<svg/.test(restyleCapturedHtml || '');
 
-    // Open editor for a polyline -- icon section must be hidden entirely,
+    // Open editor for a polyline, icon section must be hidden entirely,
     // since icons never apply to lines/areas.
     openMarkupEditor(lineItem.id);
     out.sectionHiddenForLine = document.getElementById('markupIconSection').style.display === 'none';
@@ -190,7 +190,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.item1Icon === 'tent'
     && results.item2IconFallback === null
     && results.item3IconDefault === null
-    && results.lineIconIgnored === 'flag' // stored, just never rendered -- addMarkupItem doesn't kind-gate storage, styleMarkupLayer does
+    && results.lineIconIgnored === 'flag' // stored, just never rendered, addMarkupItem doesn't kind-gate storage, styleMarkupLayer does
     && results.exportedIcon === 'tent'
     && results.legacyImportAdded === true
     && results.legacyImportIcon === null

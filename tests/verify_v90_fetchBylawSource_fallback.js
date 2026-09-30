@@ -3,13 +3,13 @@
 // api/bylaw-fetch.js serverless proxy, then the old public api.allorigins.win
 // proxy as a last resort. See docs/CHANGELOG.md's v90 section and
 // tests/verify_v90_bylaw_proxy.js (which covers api/bylaw-fetch.js itself,
-// as a plain Node test -- this file only covers the front-end fallback
+// as a plain Node test, this file only covers the front-end fallback
 // *logic* in fetchBylawSource()).
 //
 // This app is normally verified by loading index.html via file:// (see
 // every other tests/verify_*.js), but the whole point of this change is
-// behaviour that differs between file:// and a real http(s) origin -- the
-// own-proxy tier only ever runs over http(s) -- so this test spins up a
+// behaviour that differs between file:// and a real http(s) origin, the
+// own-proxy tier only ever runs over http(s), so this test spins up a
 // tiny built-in Node http server to serve the repo root, in addition to a
 // plain file:// load, rather than trying to fake location.protocol (which
 // browsers don't allow overriding).
@@ -52,10 +52,10 @@ async function withStubbedLeaflet(page) {
   const port = server.address().port;
 
   try {
-    // ---- Scenario A: served over http -- own proxy tried before the public one ----
+    // ---- Scenario A: served over http, own proxy tried before the public one ----
     {
       // Console errors are NOT checked in this test (unlike every other
-      // tests/verify_*.js) -- every scenario here deliberately fails a
+      // tests/verify_*.js), every scenario here deliberately fails a
       // request (route.abort()/500) to exercise the fallback chain, which
       // the browser always logs as a "Failed to load resource" console
       // error even though it's the exact behaviour under test. Only a real
@@ -65,7 +65,7 @@ async function withStubbedLeaflet(page) {
       await withStubbedLeaflet(page);
 
       let ownProxyHit = false, publicProxyHit = false;
-      // The bylaw source URL itself -- force it to fail so fetchBylawSource() falls through.
+      // The bylaw source URL itself, force it to fail so fetchBylawSource() falls through.
       await page.route('**/main/attachments/attachView.cfm**', route => route.abort('failed'));
       await page.route('**/api/bylaw-fetch**', route => {
         ownProxyHit = true;
@@ -87,7 +87,7 @@ async function withStubbedLeaflet(page) {
       await page.close();
     }
 
-    // ---- Scenario B: served over http, own proxy itself fails -- falls through to the public proxy ----
+    // ---- Scenario B: served over http, own proxy itself fails, falls through to the public proxy ----
     {
       const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
       page.on('pageerror', err => errors.push('B PAGEERROR: ' + err.message));
@@ -109,7 +109,7 @@ async function withStubbedLeaflet(page) {
       await page.close();
     }
 
-    // ---- Scenario C: opened as a local file -- own proxy is skipped entirely, straight to the public proxy ----
+    // ---- Scenario C: opened as a local file, own proxy is skipped entirely, straight to the public proxy ----
     {
       const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
       page.on('pageerror', err => errors.push('C PAGEERROR: ' + err.message));

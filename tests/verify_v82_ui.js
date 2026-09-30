@@ -23,17 +23,17 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
   results.emojiRemoved = await page.evaluate(() => {
     return {
       toolsTabText: document.getElementById('toolsDrawerTab').textContent.trim(),
-      toolsHeadText: document.querySelector('.td-head h2').textContent.trim(),
+      toolsHeadText: document.querySelector('#toolsDrawer .rd-head h2').textContent.trim(),
       searchBarHtml: document.querySelector('.tb-search').innerHTML,
-      hasMagnifyingGlass: document.querySelector('.tb-search').innerHTML.includes('🔎'),
+      hasMagnifyingGlass: /\u{1F50D}|\u{1F50E}/u.test(document.querySelector('.tb-search').innerHTML),
     };
   });
 
   results.revealRoadButtonExists = await page.evaluate(() => {
     return {
       hasBtn: !!document.getElementById('revealRoadBtn'),
-      hasInfoBtn: !!document.getElementById('roadInfoBtn'),
-      btnLabel: document.getElementById('revealRoadBtn') ? document.getElementById('revealRoadBtn').textContent : null,
+      hasInfoBtn: !!document.getElementById('toolsInfoBtn'), // v109: one info button for all Layer Functions
+      btnLabel: document.getElementById('revealRoadBtn') ? document.querySelector('#revealRoadBtn .tr-name').textContent : null,
     };
   });
 

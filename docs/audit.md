@@ -1,7 +1,7 @@
 ---
-description: Senior-developer audit of bc-shooting-check.html (reviewed at v84) — architecture, data layer, UI/UX, security, legal, performance, and testing findings, with a prioritized 4-phase roadmap toward public web + phone app launch.
+description: Senior-developer audit of bc-shooting-check.html (reviewed at v84), architecture, data layer, UI/UX, security, legal, performance, and testing findings, with a prioritized 4-phase roadmap toward public web + phone app launch.
 ---
-# BC Shooting Location Checker — Engineering Audit
+# BC Shooting Location Checker, Engineering Audit
 
 Full formatted report: https://claude.ai/code/artifact/5c4d5e72-8c06-40c5-8fb1-d0b7220ca514
 
@@ -12,7 +12,7 @@ The app's functional core is strong: 16 live BC government data layers merged in
 
 Key measurements: 16 live data layers · 175 JS functions in one file · 0 git commits · 0 tests in CI · 19 total ARIA/alt/role attributes · 0 uses of the Geolocation API.
 
-*(Kept as the original v84 baseline. As of v99: 18 real commits, 24 automated Playwright tests — see the updated Phase 1 status below for what's actually done, in progress, or waiting on a decision only Karim can make.)*
+*(Kept as the original v84 baseline. As of v99: 18 real commits, 24 automated Playwright tests, see the updated Phase 1 status below for what's actually done, in progress, or waiting on a decision only Karim can make.)*
 
 ## What's already working
 - Data coverage: parcels, municipal boundaries, parks, Crown tenures, woodlots, WMAs, merged RESULTS+FTEN cutblocks with active-buffer warnings, DRA roads + forest service roads with real Wildlife Act buffer classification, MVPR closures, RSTBC recreation data, live bylaw fetch-and-parse for 3 municipalities, personal map markup with GeoJSON export/import.
@@ -20,35 +20,35 @@ Key measurements: 16 live data layers · 175 JS functions in one file · 0 git c
 - Process: an unusually honest, detailed build-notes changelog with 40+ self-tracked known limitations.
 
 ## Key gaps by category
-**Architecture** — not a git repo; one 390KB file, no modules/bundler/package manifest; Leaflet loaded live from cdnjs with no lockfile.
+**Architecture**, not a git repo; one 390KB file, no modules/bundler/package manifest; Leaflet loaded live from cdnjs with no lockfile.
 
-**Data layer** — every one of the 16 WFS layers + Nominatim + Overpass + Open511 + Mapbox + a free third-party CORS proxy (api.allorigins.win, used for bylaw text) is called directly from the browser, no backend, no caching, no rate limiting. Risk of BC's own WFS servers rate-limiting the app under real public traffic. No retry/backoff, no offline cache.
+**Data layer**, every one of the 16 WFS layers + Nominatim + Overpass + Open511 + Mapbox + a free third-party CORS proxy (api.allorigins.win, used for bylaw text) is called directly from the browser, no backend, no caching, no rate limiting. Risk of BC's own WFS servers rate-limiting the app under real public traffic. No retry/backoff, no offline cache.
 
-**UI/UX** — only 19 ARIA/alt/role/tabindex attributes total; 17 manually absolute/fixed-positioned elements + 12 explicit z-index values (root cause of a recurring "buttons overlap" bug class, already fixed 3+ separate times); no onboarding; no dark mode; no safe-area-inset handling; no print/export view.
+**UI/UX**, only 19 ARIA/alt/role/tabindex attributes total; 17 manually absolute/fixed-positioned elements + 12 explicit z-index values (root cause of a recurring "buttons overlap" bug class, already fixed 3+ separate times); no onboarding; no dark mode; no safe-area-inset handling; no print/export view.
 
-**Mobile/app readiness** — no manifest.json/service worker/icons (not installable); zero Geolocation API usage (no "use my current location" — the single highest-value missing feature); no offline tile caching; markup export is GeoJSON-only (no GPX/KML); no URL deep-linking.
+**Mobile/app readiness**, no manifest.json/service worker/icons (not installable); zero Geolocation API usage (no "use my current location", the single highest-value missing feature); no offline tile caching; markup export is GeoJSON-only (no GPX/KML); no URL deep-linking.
 
-**Security** — Mapbox token shipped as a plaintext placeholder with no referrer restriction; bylaw lookups routed through an uncontrolled third-party CORS proxy; no privacy policy or terms of use.
+**Security**, Mapbox token shipped as a plaintext placeholder with no referrer restriction; bylaw lookups routed through an uncontrolled third-party CORS proxy; no privacy policy or terms of use.
 
-**Legal/licensing** — a strong, specific disclaimer already exists (not legal advice, non-affiliation, Trespass Act citation). Before public launch: confirm OGL-BC and OSM/ODbL attribution appears everywhere required, re-check Esri/Mapbox/Open511 ToS at real traffic volume, consider a lawyer review of the specific legal claims made.
+**Legal/licensing**, a strong, specific disclaimer already exists (not legal advice, non-affiliation, Trespass Act citation). Before public launch: confirm OGL-BC and OSM/ODbL attribution appears everywhere required, re-check Esri/Mapbox/Open511 ToS at real traffic volume, consider a lawyer review of the specific legal claims made.
 
-**Performance** — single unminified ~390KB file parsed on every load; no caching, code-splitting, or lazy-loading.
+**Performance**, single unminified ~390KB file parsed on every load; no caching, code-splitting, or lazy-loading.
 
-**Testing** — verification has been ad hoc Playwright scripts per bug fix, never committed or run in CI; no production error monitoring.
+**Testing**, verification has been ad hoc Playwright scripts per bug fix, never committed or run in CI; no production error monitoring.
 
 **Known, already-tracked data gaps** (no public BC data source found for any of these): road-quality/degradation colour-coding, physical road impasses (washouts/gates), Wildlife Act named local no-shooting areas beyond the highway-corridor list, Crown tenure seasonal closure periods.
 
 ## Roadmap (4 phases)
 
-### Phase 1 — Foundation (status as of v99)
-- [P0] **DONE** — Move the project into git, with real commits going forward. 18 commits since the v84 baseline import, one per shipped version from v92 on.
-- [P0] **IN PROGRESS** — Split into an organized source tree with a real build step (Vite/esbuild). 4 of 5 planned extractions under way per `docs/PLAN.md` (config/constants+layers, WFS query layer, map click-chooser, first of three render.js passes) — `src/` holds 5 files, ~615 lines out of the original single script. Two more render.js passes + the full `ui/` split remain. The Vite build itself has never been run for real (this sandbox's network blocks the npm registry) — needs `npm install && npm run build` verified on a machine with real network access.
-- [P0] **NEEDS YOUR INPUT** — Stand up real hosting, a domain, and HTTPS. Live on Vercel with HTTPS since v90/v94, at the default `bc-shooting-checker.vercel.app` subdomain. No custom domain configured — your call whether that's fine for now.
-- [P0] **IN PROGRESS** — Add a minimal backend to proxy WFS/Nominatim/Overpass/bylaw calls (fixes the CORS-proxy dependency, hides the Mapbox key, unlocks caching/rate-limiting). Bylaw lookups already proxy through `api/bylaw-fetch.js` (v90). WFS/Nominatim/Overpass still call directly from the browser — the biggest remaining P0 gap.
-- [P1] **NEEDS YOUR INPUT (moot for now)** — Restrict the Mapbox token to the domain (or move tiles behind the new backend). `MAPBOX_TOKEN` is still the unfilled placeholder string — nothing to restrict until you paste a real one in.
-- [P1] **IN PROGRESS** — Stand up CI: lint, build, and the promoted Playwright suite on every push. `.github/workflows/ci.yml` exists and runs install/test/build on every push/PR to `main`. No lint step yet, and the workflow has never actually executed (only runs after a real GitHub push) — worth checking the Actions tab after your next push.
+### Phase 1, Foundation (status as of v99)
+- [P0] **DONE**, Move the project into git, with real commits going forward. 18 commits since the v84 baseline import, one per shipped version from v92 on.
+- [P0] **IN PROGRESS**, Split into an organized source tree with a real build step (Vite/esbuild). 4 of 5 planned extractions under way per `docs/PLAN.md` (config/constants+layers, WFS query layer, map click-chooser, first of three render.js passes), `src/` holds 5 files, ~615 lines out of the original single script. Two more render.js passes + the full `ui/` split remain. The Vite build itself has never been run for real (this sandbox's network blocks the npm registry), needs `npm install && npm run build` verified on a machine with real network access.
+- [P0] **NEEDS YOUR INPUT**, Stand up real hosting, a domain, and HTTPS. Live on Vercel with HTTPS since v90/v94, at the default `bc-shooting-checker.vercel.app` subdomain. No custom domain configured, your call whether that's fine for now.
+- [P0] **IN PROGRESS**, Add a minimal backend to proxy WFS/Nominatim/Overpass/bylaw calls (fixes the CORS-proxy dependency, hides the Mapbox key, unlocks caching/rate-limiting). Bylaw lookups already proxy through `api/bylaw-fetch.js` (v90). WFS/Nominatim/Overpass still call directly from the browser, the biggest remaining P0 gap.
+- [P1] **NEEDS YOUR INPUT (moot for now)**, Restrict the Mapbox token to the domain (or move tiles behind the new backend). `MAPBOX_TOKEN` is still the unfilled placeholder string, nothing to restrict until you paste a real one in.
+- [P1] **IN PROGRESS**, Stand up CI: lint, build, and the promoted Playwright suite on every push. `.github/workflows/ci.yml` exists and runs install/test/build on every push/PR to `main`. No lint step yet, and the workflow has never actually executed (only runs after a real GitHub push), worth checking the Actions tab after your next push.
 
-### Phase 2 — Public web launch readiness
+### Phase 2, Public web launch readiness
 - [P0] Publish a Privacy Policy and Terms of Use
 - [P0] Licensing/attribution pass across every data source (OGL-BC, OSM/ODbL, Esri, Mapbox, Open511)
 - [P1] Accessibility audit + fix highest-impact issues (keyboard nav, contrast, ARIA labels)
@@ -57,7 +57,7 @@ Key measurements: 16 live data layers · 175 JS functions in one file · 0 git c
 - [P1] Add basic error monitoring + uptime checks
 - [P2] Cross-browser/cross-device QA pass, especially iOS Safari
 
-### Phase 3 — "Phone application" readiness
+### Phase 3, "Phone application" readiness
 - [P0] Ship as an installable PWA (manifest, service worker, icon set, offline app-shell)
 - [P0] Add geolocation ("use my current location")
 - [P1] Add offline map/tile caching for a saved area
@@ -65,7 +65,7 @@ Key measurements: 16 live data layers · 175 JS functions in one file · 0 git c
 - [P2] Add URL-based deep linking (?lat=&lng=)
 - [P2] Once the PWA is stable, wrap with Capacitor for App Store / Play Store listings
 
-### Phase 4 — Product polish & growth
+### Phase 4, Product polish & growth
 - [P2] First-run onboarding tour
 - [P2] Replace hand-positioned UI with a systematic responsive layout
 - [P2] Dark mode

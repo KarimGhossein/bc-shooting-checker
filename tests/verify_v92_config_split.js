@@ -2,7 +2,7 @@
 // SEARCH_RADIUS_M / CUTBLOCK_SEARCH_RADIUS_M / NEARBY_PARCEL_MAX_FEATURES /
 // CUTBLOCK_START_DATE_CQL moved to src/config/constants.js, and LAYERS moved
 // to src/config/layers.js, both as plain classic <script src> files (not ES
-// modules -- see those files' own top comments and docs/PLAN.md's "Why
+// modules, see those files' own top comments and docs/PLAN.md's "Why
 // classic scripts, not ES modules" section for why: an ES module's import
 // is blocked by CORS under file://, which would break both this app's own
 // file://-loaded test suite and its standalone "open directly, works
@@ -55,7 +55,7 @@ const ROOT = path.resolve(__dirname, '..');
   });
 
   // Also confirm, directly from disk (not the browser), that these
-  // declarations no longer live inline in index.html -- the DOM check above
+  // declarations no longer live inline in index.html, the DOM check above
   // could pass even if a stray duplicate remained (redeclare would throw,
   // but checking explicitly is cheap and catches the file-organization
   // intent, not just the runtime behaviour).
@@ -76,7 +76,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.nearbyParcelMax === 'number'
     && results.startDateCql === 'string'
     && results.layersType === 'object'
-    && results.layerKeys.length === 16
+    && results.layerKeys.length === 17 // v109: + mu
     && results.constantsIdx !== -1 && results.layersIdx !== -1
     && results.constantsIdx < results.layersIdx
     && results.mainInlineIdx !== -1

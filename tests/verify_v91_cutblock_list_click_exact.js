@@ -1,5 +1,5 @@
 // Regression test for v91: clicking a cutblock in the report list must
-// always open exactly that cutblock's own popup -- never the shared "N
+// always open exactly that cutblock's own popup, never the shared "N
 // records here" chooser (openNearbyFeaturesPopupAt()), even when that
 // cutblock genuinely overlaps another registered feature at its centroid.
 //
@@ -50,14 +50,14 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     currentCutOpenings = [fakeEntry];
 
     // Register a second, genuinely overlapping feature (a tenure) at the
-    // exact same geometry/point -- the scenario that used to trigger the
+    // exact same geometry/point, the scenario that used to trigger the
     // ambiguous chooser via openNearbyFeaturesPopupAt().
     resetClickableSource('overlay:cutblocks');
-    pushClickable(square, '🪵', 'TEST-1', '🪵 TEST-1', cutblockPopup(fakeEntry));
+    pushClickable(square, '', 'TEST-1', 'TEST-1', cutblockPopup(fakeEntry));
     resetClickableSource('overlay:tenures');
-    pushClickable(square, '📜', 'Overlapping tenure', '📜 Tenure', '<div>tenure detail</div>');
+    pushClickable(square, '', 'Overlapping tenure', 'Tenure', '<div>tenure detail</div>');
 
-    // Capture the exact popup content opened -- see v89/v90 tests for why
+    // Capture the exact popup content opened, see v89/v90 tests for why
     // (the network-stubbed L.popup() never touches the real DOM).
     const realL = window.L;
     let capturedContent = null;
@@ -86,7 +86,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
 
     // Two genuinely overlapping records really were registered at this
     // point (sanity check that this test scenario is the real ambiguous
-    // case, not an accidental no-op) -- a real map click here would still
+    // case, not an accidental no-op), a real map click here would still
     // correctly show the chooser; only the list-click path should skip it.
     const lineTolM = pixelToleranceMeters({lat:51.5,lng:-122.5}, NEARBY_CLICK_LINE_TOLERANCE_PX);
     const pointTolM = pixelToleranceMeters({lat:51.5,lng:-122.5}, NEARBY_CLICK_POINT_TOLERANCE_PX);

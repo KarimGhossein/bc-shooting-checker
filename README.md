@@ -12,14 +12,14 @@ This repository was just started (see `docs/audit.md`) as the first step of
 turning a single-file prototype into something that can be hosted publicly
 and installed as a phone app. The full working app, as it existed before
 this migration began, is preserved unmodified at
-[`legacy/bc-shooting-check.html`](legacy/bc-shooting-check.html) — that file
+[`legacy/bc-shooting-check.html`](legacy/bc-shooting-check.html), that file
 is still the source of truth for behaviour while the module split
 described in [`docs/PLAN.md`](docs/PLAN.md) is in progress.
 
 ## Project history
 
 [`docs/CHANGELOG.md`](docs/CHANGELOG.md) is the full build log carried over
-from before version control existed — every version from v1 through v84,
+from before version control existed, every version from v1 through v84,
 in order, with what changed and why. Worth reading before touching
 behaviour that predates this repo.
 
@@ -35,6 +35,6 @@ npm test         # run the verification suite
 ## License / data attribution
 
 See the in-app Disclaimers panel and `docs/audit.md` for the current state
-of data licensing/attribution — this needs a dedicated pass before public
-launch (Open Government Licence – BC, OpenStreetMap ODbL, Esri, Mapbox,
+of data licensing/attribution, this needs a dedicated pass before public
+launch (Open Government Licence, British Columbia, OpenStreetMap ODbL, Esri, Mapbox,
 DriveBC Open511 all apply to data this app displays).

@@ -1,6 +1,6 @@
 // Regression test for v102: "Let's make the UI look more sleek like a
 // premium product. Similar to how the website in this project previews the
-// app itself." -- a CSS/head-only reskin of the app's chrome (header,
+// app itself.", a CSS/head-only reskin of the app's chrome (header,
 // drawers, buttons, cards, modals, legend, checklist, badges/chips) to match
 // the warm-editorial, high-end look of the KAGE marketing site's own design
 // system (off-white/near-black palette, bronze accent, Newsreader italic +
@@ -10,8 +10,8 @@
 // automatic dark mode and the reasoning for keeping every CSS custom
 // property *name* unchanged (only values moved).
 //
-// This is a CSS/head-only change -- no element id/class was added, renamed
-// or removed, and no JS function signature changed -- so this test checks
+// This is a CSS/head-only change, no element id/class was added, renamed
+// or removed, and no JS function signature changed, so this test checks
 // exactly that boundary: the new design tokens actually took (computed
 // style, not just presence in the stylesheet text), and every functional
 // selector every other test in this suite depends on is still there,
@@ -31,9 +31,9 @@
 //      "whatever the page loads with by default" expectations corrected.
 //   2) v103 also moved the header title (.tb-title only) off the italic
 //      Newsreader serif this test used to require ("less fancy, more sleek
-//      and modern" -- Karim's words) back onto the app's own sans face.
+//      and modern", Karim's words) back onto the app's own sans face.
 //      The .headline utility class itself, and every OTHER place that uses
-//      it (modal headings, the verdict headline), are unchanged -- so the
+//      it (modal headings, the verdict headline), are unchanged, so the
 //      probe-element check on .headline below is untouched; only the
 //      .tb-title-specific assertion was removed.
 const { chromium } = require('playwright');
@@ -88,7 +88,7 @@ const ROOT = path.resolve(__dirname, '..');
       return { f, style };
     })();
     // v103: .tb-title is no longer part of the headline/serif system (see
-    // the file-top comment) -- checked here only as "still Hanken Grotesk,
+    // the file-top comment), checked here only as "still Hanken Grotesk,
     // still not italic", the inverse of what this used to assert.
     out.tbTitleStyle = (() => {
       const cs = getComputedStyle(document.querySelector('.tb-title'));
@@ -109,7 +109,7 @@ const ROOT = path.resolve(__dirname, '..');
     out.clearMenuItemCount = document.querySelectorAll('.clear-menu-item').length;
 
     // ---- functional behaviour is untouched: drawers still open/close,
-    // basemap thumb still moves, clear menu still toggles -- same checks
+    // basemap thumb still moves, clear menu still toggles, same checks
     // v96/v87/v75's own tests already make, just confirming a CSS pass
     // didn't silently break the JS that reads these classes ----
     document.getElementById('toolsDrawerTab').click();
@@ -131,7 +131,7 @@ const ROOT = path.resolve(__dirname, '..');
     const css = styleMatch ? styleMatch[1] : '';
     return {
       // v102's own head comment mentions "Space Grotesk" by name (explaining
-      // why it was replaced) -- that's expected and fine; what must be gone
+      // why it was replaced), that's expected and fine; what must be gone
       // is the actual font-family declaration and the Google Fonts request
       // for it.
       noSpaceGrotesk: !/font-family:\s*"Space Grotesk"/.test(css) && !/family=Space\+Grotesk/.test(html),
@@ -141,15 +141,17 @@ const ROOT = path.resolve(__dirname, '..');
       hasNewsreader: /Newsreader/.test(html),
       // every selector the ids above are styled by must still be present
       selectorsIntact: [
-        '.td-tab{', '.sc-tab{', '.ma-btn{', '.clear-menu-item{', '.card{',
+        // v109: the two drawer tabs share .rd-tab, and #markupPanel is a
+        // plain section inside the Tools panel (.rd-sec)
+        '.rd-tab{', '.ma-btn{', '.clear-menu-item{', '.card{',
         '.checklist-group{', '.modal-box{', '.map-legend{', '.verdict{',
-        '.flag-chip{', '.badge{', '#markupPanel{', '.bottom-panel{',
+        '.flag-chip{', '.badge{', '.rd-sec{', '.bottom-panel{',
       ].every(sel => css.includes(sel)),
     };
   })();
 
   // v103: dark is the default theme now, so a fresh page load (no saved
-  // localStorage choice -- exactly what this test's page.goto produces)
+  // localStorage choice, exactly what this test's page.goto produces)
   // resolves these to the DARK values. See verify_v103_dark_mode.js for the
   // light-theme values and the toggle that switches between them.
   const pass = results.accent === '#C9A56B'
@@ -157,7 +159,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.amber === '#E0AC5C'
     && results.green === '#6FC08A'
     && results.gray === '#ACB2AC'
-    && results.bg === '#0E1210'
+    && results.bg === '#090C0A' // v109: darker dark
     && results.radius === '18px'
     && results.radiusPill === '999px'
     && results.bodyFont.includes('Hanken Grotesk')
@@ -166,7 +168,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.tbTitleStyle.font.includes('Hanken Grotesk')
     && results.tbTitleStyle.style !== 'italic'
     && results.allCriticalIdsPresent
-    && results.clearMenuItemCount === 14
+    && results.clearMenuItemCount === 15
     && results.toolsDrawerOpens === true
     && results.toolsDrawerCloses === true
     && diskCheck.noSpaceGrotesk && diskCheck.noOldNavyBlue && diskCheck.noOldAccentBlue

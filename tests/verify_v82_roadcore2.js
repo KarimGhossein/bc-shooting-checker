@@ -18,7 +18,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
   await page.goto('file://' + require('path').resolve(__dirname, '../index.html'), { waitUntil: 'load', timeout: 60000 });
   await page.waitForTimeout(800);
 
-  // Route 99 (Sea-to-Sky), clip lat 49.36-50.15 -- a coordinate well inside that window.
+  // Route 99 (Sea-to-Sky), clip lat 49.36-50.15, a coordinate well inside that window.
   const results = await page.evaluate(() => {
     const features = [
       { properties: { ROAD_CLASS: 'local', HIGHWAY_ROUTE_NUMBER: null }, geometry: { type: 'LineString', coordinates: [[-123.1, 49.8],[-123.09,49.81]] } },

@@ -1,8 +1,8 @@
-// Regression test for v107 -- the search box's placeholder used to be cut
+// Regression test for v107, the search box's placeholder used to be cut
 // off ("Search address or p..."). See docs/CHANGELOG.md's v107 section.
 // Checks: the new placeholder and aria-label; that the placeholder text
 // genuinely fits inside the input's text area at phone and desktop widths
-// (measured with canvas measureText in the input's own computed font -- the
+// (measured with canvas measureText in the input's own computed font, the
 // suite stubs web fonts, so this runs on the fallback font, which is a
 // stricter check than Hanken Grotesk's narrower glyphs); that the search box
 // now grows on wider windows; and that the header still never collides.

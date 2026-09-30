@@ -1,6 +1,6 @@
 // Regression test for v101: "Any layer that's shown on the map should have
 // a Clear option in the clear menu." Adds three new items to the existing
-// Clear ▾ dropdown (v86/v87) -- parcelview, spots, roadview -- one per
+// Clear ▾ dropdown (v86/v87), parcelview, spots, roadview, one per
 // Mapping Functions layer (View Parcels/Shooting Spots/Reveal Road) that
 // draws its own map shapes entirely outside the single-click report and,
 // until now, had no way to be reset without re-running its own (possibly
@@ -11,7 +11,7 @@
 //
 // Also confirms a real, unrelated bug found while making this change is
 // fixed: SHOOTING_SPOTS_BLURB_HTML's help text used to tell users to press
-// "Clear Potential Spots" -- a button v86 removed when it introduced this
+// "Clear Potential Spots", a button v86 removed when it introduced this
 // same Clear ▾ dropdown, five versions before this one. That instruction
 // pointed at nothing.
 const { chromium } = require('playwright');
@@ -54,18 +54,18 @@ const ROOT = path.resolve(__dirname, '..');
     parcelViewFeatures = [{ type: 'Feature', geometry: square, properties: { OWNER_TYPE: 'Crown Provincial' } }];
     drawParcelViewLayer(parcelViewFeatures);
     resetClickableSource('spots'); // seed an unrelated source to prove it's untouched
-    pushClickable(square, '🎯', 'unrelated spot', '🎯 spot', 'html');
+    pushClickable(square, '', 'unrelated spot', 'spot', 'html');
     out.beforeParcelviewClear = {
       parcelviewCount: currentClickableFeatures.filter(f => f.source === 'parcelview').length,
       spotsCount: currentClickableFeatures.filter(f => f.source === 'spots').length,
     };
     let parcelviewThrew = false, parcelviewErr = null;
-    try { clearMapToolLayer('parcelview', '🗺️ View Parcels'); } catch (e) { parcelviewThrew = true; parcelviewErr = e.message; }
+    try { clearMapToolLayer('parcelview', 'View Parcels'); } catch (e) { parcelviewThrew = true; parcelviewErr = e.message; }
     out.parcelviewThrew = parcelviewThrew;
     out.parcelviewErr = parcelviewErr;
     out.afterParcelviewClear = {
       parcelviewCount: currentClickableFeatures.filter(f => f.source === 'parcelview').length,
-      spotsCount: currentClickableFeatures.filter(f => f.source === 'spots').length, // must survive -- different source
+      spotsCount: currentClickableFeatures.filter(f => f.source === 'spots').length, // must survive, different source
       parcelViewFeaturesReset: Array.isArray(parcelViewFeatures) && parcelViewFeatures.length === 0,
       noteText: document.getElementById('mapActionsNote').textContent,
     };
@@ -73,14 +73,14 @@ const ROOT = path.resolve(__dirname, '..');
 
     // ---- functional check 2: Shooting Spots (spots) ----
     resetClickableSource('spots');
-    pushClickable(square, '🎯', 'Potential spot — test', '🎯 Potential spot', 'html');
+    pushClickable(square, '', 'Potential spot, test', 'Potential spot', 'html');
     spotDetails = ['stale detail'];
     gapDetails = ['stale gap'];
     restrictedDetails = ['stale restricted'];
     resetClickableSource('roadview'); // seed an unrelated source
-    pushClickable(square, '🛣️', 'unrelated road', '🛣️ Road', 'html');
+    pushClickable(square, '', 'unrelated road', 'Road', 'html');
     let spotsThrew = false, spotsErr = null;
-    try { clearMapToolLayer('spots', '🎯 Shooting Spots'); } catch (e) { spotsThrew = true; spotsErr = e.message; }
+    try { clearMapToolLayer('spots', 'Shooting Spots'); } catch (e) { spotsThrew = true; spotsErr = e.message; }
     out.spotsThrew = spotsThrew;
     out.spotsErr = spotsErr;
     out.afterSpotsClear = {
@@ -95,11 +95,11 @@ const ROOT = path.resolve(__dirname, '..');
 
     // ---- functional check 3: Reveal Road (roadview) ----
     resetClickableSource('roadview');
-    pushClickable(square, '🛣️', 'Road — test', '🛣️ Road', 'html');
+    pushClickable(square, '', 'Road, test', 'Road', 'html');
     resetClickableSource('parcelview'); // seed an unrelated source
-    pushClickable(square, '🗺️', 'unrelated parcel', '🗺️ Parcel', 'html');
+    pushClickable(square, '', 'unrelated parcel', 'Parcel', 'html');
     let roadviewThrew = false, roadviewErr = null;
-    try { clearMapToolLayer('roadview', '🛣️ Reveal Road'); } catch (e) { roadviewThrew = true; roadviewErr = e.message; }
+    try { clearMapToolLayer('roadview', 'Reveal Road'); } catch (e) { roadviewThrew = true; roadviewErr = e.message; }
     out.roadviewThrew = roadviewThrew;
     out.roadviewErr = roadviewErr;
     out.afterRoadviewClear = {
@@ -110,10 +110,10 @@ const ROOT = path.resolve(__dirname, '..');
     resetClickableSource('parcelview'); // clean up the seeded unrelated entry
 
     // ---- functional check 4: real DOM click on a menu item routes to
-    // clearMapToolLayer(), not clearReportCategory() -- distinguishable by
+    // clearMapToolLayer(), not clearReportCategory(), distinguishable by
     // the note text ("...cleared from the map." vs "...and report.") ----
     resetClickableSource('spots');
-    pushClickable(square, '🎯', 'Potential spot — test2', '🎯 Potential spot', 'html');
+    pushClickable(square, '', 'Potential spot, test2', 'Potential spot', 'html');
     document.getElementById('clearMenuBtn').click(); // open the dropdown
     document.querySelector('#clearMenu .clear-menu-item[data-key="spots"]').click();
     out.domClickNoteText = document.getElementById('mapActionsNote').textContent;
@@ -126,15 +126,15 @@ const ROOT = path.resolve(__dirname, '..');
     // clearReportCategory) ----
     let reportCategoryStillWorks = false, reportCategoryErr = null;
     try {
-      clearReportCategory('bylaw', '📜 Bylaw Lookup'); // no map shapes for this one -- must be a harmless no-op, not throw
+      clearReportCategory('bylaw', 'Bylaw Lookup'); // no map shapes for this one, must be a harmless no-op, not throw
       reportCategoryStillWorks = true;
     } catch (e) { reportCategoryErr = e.message; }
     out.reportCategoryStillWorks = reportCategoryStillWorks;
     out.reportCategoryErr = reportCategoryErr;
 
     // ---- stale help text fixed ----
-    out.shootingSpotsBlurbMentionsRemovedButton = SHOOTING_SPOTS_BLURB_HTML.includes('Clear Potential Spots');
-    out.clearBlurbMentionsThreeLayers = CLEAR_BLURB_HTML.includes('View Parcels') && CLEAR_BLURB_HTML.includes('Shooting Spots') && CLEAR_BLURB_HTML.includes('Reveal Road');
+    out.shootingSpotsBlurbMentionsRemovedButton = TOOLS_HELP_HTML.includes('Clear Potential Spots'); // v109: the four tool blurbs merged into TOOLS_HELP_HTML
+    out.clearBlurbMentionsThreeLayers = ['parcelview','spots','roadview'].every(k => !!document.querySelector(`.clear-menu-item[data-key="${k}"]`)); // v109: help text shortened; the menu itself lists the three layers
 
     return out;
   });
@@ -153,7 +153,7 @@ const ROOT = path.resolve(__dirname, '..');
   })();
 
   const pass = results.threeNewItemsFirst
-    && results.totalItemCount === 14
+    && results.totalItemCount === 15 // v109: + Management Unit
     && results.mapToolLayersType === 'object'
     && results.clearMapToolLayerType === 'function'
     && results.mapToolLayerKeysMatch === true
@@ -163,18 +163,18 @@ const ROOT = path.resolve(__dirname, '..');
     && results.afterParcelviewClear.parcelviewCount === 0
     && results.afterParcelviewClear.spotsCount === 1
     && results.afterParcelviewClear.parcelViewFeaturesReset === true
-    && results.afterParcelviewClear.noteText === '🗺️ View Parcels cleared from the map.'
+    && results.afterParcelviewClear.noteText === 'View Parcels cleared from the map.'
     && results.spotsThrew === false
     && results.afterSpotsClear.spotsCount === 0
     && results.afterSpotsClear.roadviewCount === 1
     && results.afterSpotsClear.spotDetailsReset === true
     && results.afterSpotsClear.gapDetailsReset === true
     && results.afterSpotsClear.restrictedDetailsReset === true
-    && results.afterSpotsClear.noteText === '🎯 Shooting Spots cleared from the map.'
+    && results.afterSpotsClear.noteText === 'Shooting Spots cleared from the map.'
     && results.roadviewThrew === false
     && results.afterRoadviewClear.roadviewCount === 0
     && results.afterRoadviewClear.parcelviewCount === 1
-    && results.afterRoadviewClear.noteText === '🛣️ Reveal Road cleared from the map.'
+    && results.afterRoadviewClear.noteText === 'Reveal Road cleared from the map.'
     && results.domClickClearedSpots === true
     && results.domClickNoteText.includes('cleared from the map.') && !results.domClickNoteText.includes('and report')
     && results.domClickMenuClosed === true

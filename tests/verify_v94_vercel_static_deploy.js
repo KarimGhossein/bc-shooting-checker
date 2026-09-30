@@ -5,7 +5,7 @@
 // `vite.config.mjs` + "vite" in package.json's devDependencies as a Vite
 // project and runs `npm run build`, serving only `dist/`. Vite's HTML
 // processing only bundles/copies files reachable through the
-// `type="module"` import graph or `public/` -- a classic `<script
+// `type="module"` import graph or `public/`, a classic `<script
 // src="src/config/whatever.js">` (deliberately NOT a module, see
 // docs/PLAN.md's "why classic scripts, not ES modules") is invisible to
 // that graph, so every src/config/*.js file 404's in that build's output
@@ -15,14 +15,14 @@
 // page-load-time crash (MARKUP_ICONS referenced at the main script's top
 // level) that also took out My Markup and the header progress bar.
 //
-// This is a plain Node test (no browser) -- what it verifies is repo
+// This is a plain Node test (no browser), what it verifies is repo
 // configuration, not runtime behaviour, and the actual fix can't be
 // verified end-to-end from inside this sandbox (no Vercel dashboard
 // access, and npm install is blocked by this sandbox's own network
-// policy -- see docs/PLAN.md's v94 section). What it CAN catch: a future
+// policy, see docs/PLAN.md's v94 section). What it CAN catch: a future
 // edit accidentally removing or weakening vercel.json's static-passthrough
 // settings, or removing a src/config/*.js file's <script src> reference
-// without removing the file (or vice versa) -- either of which would
+// without removing the file (or vice versa), either of which would
 // silently reintroduce this exact failure mode.
 const fs = require('fs');
 const path = require('path');
@@ -44,12 +44,12 @@ const ROOT = path.resolve(__dirname, '..');
 
   // The three config files this whole bug was about must still exist on
   // disk AND still be referenced from index.html as classic (non-module)
-  // <script src> tags, in the same dependency order -- vercel.json fixes
+  // <script src> tags, in the same dependency order, vercel.json fixes
   // *how* they're served, not whether they're wired up correctly, so this
   // is a separate, still-worthwhile check (verify_v92_config_split.js and
   // verify_v93_marker_icons.js already check the DOM/runtime side of this
   // via a file:// Playwright load; this checks the raw source instead, so
-  // it also catches a mistake that a file:// load wouldn't -- e.g. a
+  // it also catches a mistake that a file:// load wouldn't, e.g. a
   // reintroduced type="module" attribute, which works fine under file://
   // in this Chromium sandbox's own test runs but is exactly the thing that
   // makes Vite's bundler swallow a script, which is the failure mode this
@@ -66,7 +66,7 @@ const ROOT = path.resolve(__dirname, '..');
   results.allConfigFilesReferenced = configFiles.every(f => f in foundTags);
   results.noneAreModules = configFiles.every(f => !/type=["']module["']/.test(foundTags[f] || ''));
   // Dependency order matters (layers.js/icons.js read consts by bare name
-  // from constants.js) -- classic <script> tags execute in document order.
+  // from constants.js), classic <script> tags execute in document order.
   const idxOf = f => html.indexOf(`src="${f}"`);
   results.correctOrder = idxOf('src/config/constants.js') < idxOf('src/config/layers.js')
     && idxOf('src/config/layers.js') < idxOf('src/config/icons.js');

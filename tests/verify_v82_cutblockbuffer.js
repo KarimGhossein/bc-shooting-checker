@@ -41,7 +41,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     };
   });
 
-  // Case 2: an ACTIVE cutblock exists but far away (2km+) -- should NOT trigger the buffer flag, only the generic "N within 2km" one.
+  // Case 2: an ACTIVE cutblock exists but far away (2km+), should NOT trigger the buffer flag, only the generic "N within 2km" one.
   results.activeCutblockFarAway = await page.evaluate(() => {
     const okEmpty = { ok: true, features: [] };
     // ~2km north of the click point (roughly 0.018 deg lat)
@@ -63,7 +63,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     };
   });
 
-  // Case 3: cutblock nearby but NOT active (e.g. life cycle = RETIRED) -- should NOT trigger buffer flag even though inside geometry.
+  // Case 3: cutblock nearby but NOT active (e.g. life cycle = RETIRED), should NOT trigger buffer flag even though inside geometry.
   results.pinInsideRetiredCutblock = await page.evaluate(() => {
     const okEmpty = { ok: true, features: [] };
     const square = { type: 'Polygon', coordinates: [[[-122.51, 51.49], [-122.49, 51.49], [-122.49, 51.51], [-122.51, 51.51], [-122.51, 51.49]]] };
@@ -81,7 +81,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     return { hasBufferPill: cutblocksCard ? cutblocksCard.textContent.includes('within 400m of active logging') : null };
   });
 
-  // Case 4: oversized active cutblock right at the pin -- excluded (same as map sweep), should NOT trigger.
+  // Case 4: oversized active cutblock right at the pin, excluded (same as map sweep), should NOT trigger.
   results.pinInsideOversizedActiveCutblock = await page.evaluate(() => {
     const okEmpty = { ok: true, features: [] };
     const square = { type: 'Polygon', coordinates: [[[-122.51, 51.49], [-122.49, 51.49], [-122.49, 51.51], [-122.51, 51.51], [-122.51, 51.49]]] };
