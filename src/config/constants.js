@@ -85,4 +85,3 @@ const SYNOPSIS_REGION_PDFS = {
 // far the map zooms in on the person's own location.
 const BC_BOUNDS = [[48.2, -139.1], [60.0, -114.0]];
 const LOCATE_ZOOM = 11;
-const GEO_ASKED_KEY = "kageGeoAsked";

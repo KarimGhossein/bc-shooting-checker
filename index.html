@@ -2406,10 +2406,9 @@ document.getElementById('spotsCancelBtn').addEventListener('click', cancelSpotsS
 document.getElementById('kageHomeLink').setAttribute('href', KAGE_HOME_URL);
 
 // ---------------- your location (v110) ----------------
-// A locate button under the zoom controls, plus one automatic attempt on
-// load: silently when the browser already has permission, and the first
-// time someone visits (one browser prompt, never repeated). Only zooms in
-// when the position is inside BC; it never drops the report pin or runs a
+// A locate button under the zoom controls, plus an automatic request on
+// every load (see autoLocate below). Only zooms in when the position is
+// inside BC; it never drops the report pin or runs a
 // lookup, so nothing is queried until the person picks a spot.
 let youAreHere = null;
 function locateUser(manual){
@@ -2444,15 +2443,13 @@ function locateUser(manual){
   map.addControl(new Locate());
 })();
 (function autoLocate(){
+  // v110b: ask for the person's location every time the map opens. If they
+  // allow it (now or earlier), zoom to their area; if they decline, dismiss
+  // or the lookup fails, the map simply stays on the whole-BC view. Once
+  // someone blocks location for the site, browsers stop showing the prompt,
+  // so this never nags.
   if(!navigator.geolocation) return;
-  let asked = false;
-  try{ asked = localStorage.getItem(GEO_ASKED_KEY) === '1'; }catch(e){}
-  const go = () => { try{ localStorage.setItem(GEO_ASKED_KEY, '1'); }catch(e){} setTimeout(() => locateUser(false), 1800); };
-  if(navigator.permissions && navigator.permissions.query){
-    navigator.permissions.query({name: 'geolocation'}).then(p => {
-      if(p.state === 'granted' || (p.state === 'prompt' && !asked)) go();
-    }).catch(() => { if(!asked) go(); });
-  } else if(!asked) go();
+  setTimeout(() => locateUser(false), 1800); // after the splash, so the prompt isn't hidden behind it
 })();
 
 (function fadeSplash(){
