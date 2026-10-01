@@ -40,7 +40,7 @@ const ROOT = path.resolve(__dirname, '..');
     const out = {};
 
     // ---- menu structure: three new items, correctly positioned/keyed ----
-    const menuKeys = Array.from(document.querySelectorAll('#clearMenu .clear-menu-item')).map(b => b.dataset.key);
+    const menuKeys = Array.from(document.querySelectorAll('#clearMenu .clear-menu-item')).map(b => b.dataset.key).filter(k => k !== 'all'); // v110: 'Clear all layers' sits first
     out.menuKeys = menuKeys;
     out.threeNewItemsFirst = JSON.stringify(menuKeys.slice(0, 3)) === JSON.stringify(['parcelview', 'spots', 'roadview']);
     out.totalItemCount = menuKeys.length;

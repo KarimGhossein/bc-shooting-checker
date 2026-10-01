@@ -977,9 +977,14 @@ async function runPotentialSpotsSearch(area){
   spotDetails = []; gapDetails = []; restrictedDetails = []; // v45/v57, reset each run so a popup's "i" index always points at this run's detail text, not a stale one from the previous press
   // v47, buffers drawn first (bottom of the stack) so the outlines and the
   // spots themselves render on top of the shaded zone and stay clickable.
-  renderActiveCutblockBuffers(activeCuts, spotLayer); // shaded buffer zone around each active cutblock
-  renderActiveCutblockOutlines(activeCuts, spotLayer); // the cutblock's own real outline, on top of its buffer zone
-  renderNearbyRoads(allRoads, spotLayer); // v58, every side road already used for the road buffer, now actually drawn; hover for class/buffer distance
+  // v110: Shooting Spots draws only where shooting may be possible (teal
+  // spots and purple presumed-Crown gaps). Restricted areas, roads and the
+  // active-cutblock outline/buffer are no longer drawn; active logging
+  // nearby becomes an advisory in the spot's own popup instead (bbox
+  // test against each active cutblock grown by CUTBLOCK_WARN_DISTANCE_M,
+  // so "nearby" is approximate). Reveal Road still draws roads on demand.
+  const activeCutBboxes = activeCuts.filter(c => c.geometry).map(c => expandBboxByMeters(bboxOfGeom(c.geometry), CUTBLOCK_WARN_DISTANCE_M));
+  const ACTIVE_LOGGING_ADVISORY = `Active logging within about ${CUTBLOCK_WARN_DISTANCE_M} m, watch for trucks and crews.`;
   let shown = 0, restrictedShown = 0, mixedCount = 0;
   // v57: how many candidate parcels have *some* portion restricted for each
   // reason, counted once per parcel (not once per red square inside it),
@@ -1005,6 +1010,7 @@ async function runPotentialSpotsSearch(area){
     if(tenures.some(t => geomsIntersect(geom, t.geometry))) advisories.push("Crown land tenure (lease/licence/permit) overlaps this parcel, check for posted restrictions.");
     if(woodlots.some(w => geomsIntersect(geom, w.geometry))) advisories.push("Inside a managed forest licence area, the licensee may have posted access rules.");
     if(cuts.some(c => geomsIntersect(geom, c.geometry))) advisories.push("A forestry opening/cutblock overlaps this parcel, check for active harvesting or hauling.");
+    { const gb = bboxOfGeom(geom); if(activeCutBboxes.some(b => bboxesOverlap(gb, b))) advisories.push(ACTIVE_LOGGING_ADVISORY); }
 
     // Expanded by the largest possible buffer (SPECIAL_ROUTE_BUFFER_M) so no
     // relevant road or building/private-land boundary is missed by the bbox
@@ -1038,10 +1044,7 @@ async function runPotentialSpotsSearch(area){
       // applied anywhere in it.
       const reasons = Array.from(new Set(cls.restrictedSquares.flatMap(s => s.reasons)));
       reasons.forEach(r => reasonParcelCounts[r]++);
-      const html = restrictedPopup(f.properties, reasons, advisories);
-      L.geoJSON(f, {style: restrictedStyle(), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
-      pushClickable(f.geometry, '', `Restricted: ${reasons.map(restrictionReasonShort).join(', ')}`, 'Restricted area', html);
-      restrictedShown++;
+      restrictedShown++; // v110: counted, not drawn
       return;
     }
     // Mixed, part of this parcel is allowed, part is restricted. Drawn as
@@ -1057,21 +1060,7 @@ async function runPotentialSpotsSearch(area){
       L.geoJSON(sq, {style: gridCellStyle(spotStyle()), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
       pushClickable(sq.geometry, '', `Potential spot: ${esc(f.properties.OWNER_TYPE || "Crown / untitled provincial")}`, 'Potential spot', allowedPopupHtml);
     });
-    // Squares sharing the exact same reason set reuse one popup string
-    // rather than each building their own, most restricted squares in a
-    // parcel share the same cause (e.g. every square along one edge is
-    // "road"), so this avoids rebuilding (and re-pushing into
-    // restrictedDetails) an identical popup dozens of times.
-    const popupByReasonKey = {};
-    cls.restrictedSquares.forEach(({p, reasons}) => {
-      const key = reasons.slice().sort().join(',');
-      if(!popupByReasonKey[key]) popupByReasonKey[key] = restrictedPopup(f.properties, reasons, null);
-      const sq = squareAroundPoint(p, cls.spacingM);
-      L.geoJSON(sq, {style: gridCellStyle(restrictedStyle()), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
-      pushClickable(sq.geometry, '', `Restricted: ${reasons.map(restrictionReasonShort).join(', ')}`, 'Restricted area', popupByReasonKey[key]);
-    });
-    drawGridRegionOutline(cls.allowedSquares, cls.spacingM, spotStyle(), spotLayer);
-    drawGridRegionOutline(cls.restrictedSquares.map(sq => sq.p), cls.spacingM, restrictedStyle(), spotLayer);
+    // v110: the restricted part of a mixed parcel is no longer drawn.
     shown++;
   });
 
@@ -1112,6 +1101,7 @@ async function runPotentialSpotsSearch(area){
       if(tenures.some(t => pointInGeometry(t.geometry, p))) advisories.push("Crown land tenure (lease/licence/permit) overlaps this point, check for posted restrictions.");
       if(woodlots.some(w => pointInGeometry(w.geometry, p))) advisories.push("Inside a managed forest licence area, the licensee may have posted access rules.");
       if(cuts.some(c => pointInGeometry(c.geometry, p))) advisories.push("A forestry opening/cutblock overlaps this point, check for active harvesting or hauling.");
+      if(activeCutBboxes.some(b => bboxContainsPoint(b, p))) advisories.push(ACTIVE_LOGGING_ADVISORY);
 
       if(infraChecked){
         const pBboxExp = expandBboxByMeters([p[0], p[1], p[0], p[1]], SPECIAL_ROUTE_BUFFER_M);
@@ -1123,9 +1113,7 @@ async function runPotentialSpotsSearch(area){
       // v47, no per-point cutblock-distance check here any more; a gap
       // point that falls within the buffer distance of an active cutblock
       // now shows that visually, via the shaded buffer zone
-      // renderActiveCutblockBuffers() already drew underneath it, same as
-      // for the confirmed-parcel spots
-      // above.
+      // v110: active logging nearby is an advisory (ACTIVE_LOGGING_ADVISORY above), not a drawn zone.
       const gapSq = squareAroundPoint(p, gapSpacingM);
       L.geoJSON(gapSq, {style: gapStyle(), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
       pushClickable(gapSq.geometry, '', 'No parcel record (presumed Crown)', 'No parcel record', gapPopup(advisories, infraChecked));

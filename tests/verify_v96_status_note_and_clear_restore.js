@@ -46,7 +46,7 @@ const ROOT = path.resolve(__dirname, '..');
     // ---- Clear ▾ dropdown restored ----
     out.clearMenuBtnRestored = !!document.getElementById('clearMenuBtn');
     out.clearMenuRestored = !!document.getElementById('clearMenu');
-    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item').length === 15;
+    out.clearMenuItemCountRestored = document.querySelectorAll('.clear-menu-item:not(.clear-all-item)').length === 15;
 
     // ---- v109: the note is a status toast under the search bar: hidden
     // while empty, replaces the search status when text arrives, fades

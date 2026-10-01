@@ -106,7 +106,7 @@ const ROOT = path.resolve(__dirname, '..');
       'mapLegend', 'legendToggle', 'searchInput', 'searchGoBtn', 'headerInfoBtn', 'disclaimerBtn',
     ];
     out.allCriticalIdsPresent = criticalIds.every(id => !!document.getElementById(id));
-    out.clearMenuItemCount = document.querySelectorAll('.clear-menu-item').length;
+    out.clearMenuItemCount = document.querySelectorAll('.clear-menu-item:not(.clear-all-item)').length;
 
     // ---- functional behaviour is untouched: drawers still open/close,
     // basemap thumb still moves, clear menu still toggles, same checks

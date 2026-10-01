@@ -80,3 +80,9 @@ const SYNOPSIS_REGION_PDFS = {
   "7B": {name: "Peace", file: "hunting-trapping-synopsis-region-7b-peace.pdf"},
   "8": {name: "Okanagan", file: "hunting-trapping-synopsis-region-8-okanagan.pdf"}
 };
+
+// v110: the starting view (southwest and northeast corners of BC) and how
+// far the map zooms in on the person's own location.
+const BC_BOUNDS = [[48.2, -139.1], [60.0, -114.0]];
+const LOCATE_ZOOM = 11;
+const GEO_ASKED_KEY = "kageGeoAsked";

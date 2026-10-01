@@ -671,6 +671,7 @@
   .clear-menu{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:6px;z-index:10;max-height:280px;overflow-y:auto;}
   .clear-menu-item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:9px;padding:7px 9px;margin-bottom:2px;cursor:pointer;font:inherit;font-size:11.5px;font-weight:700;color:var(--ink);}
   .clear-menu-item:last-child{margin-bottom:0;}
+  .clear-menu-item.clear-all-item{font-weight:700;border-bottom:1px solid var(--border);border-radius:9px 9px 0 0;margin-bottom:4px;padding-bottom:9px;}
   .clear-menu-item:hover{background:var(--bg);}
 
   /* bottom offset accounts for the fixed bottom report drawer's collapsed
@@ -903,6 +904,9 @@
      var(--ink), so it follows the theme like every other control. */
   #map .leaflet-draw-toolbar a{position:relative;background-image:none !important;}
   #map .leaflet-draw-toolbar a::before{content:"";position:absolute;inset:0;margin:auto;width:17px;height:17px;background-color:var(--ink);-webkit-mask:var(--kage-ic) center/contain no-repeat;mask:var(--kage-ic) center/contain no-repeat;}
+  #map .kage-locate a{position:relative;}
+  #map .kage-locate a::before{content:"";position:absolute;inset:0;margin:auto;width:17px;height:17px;background-color:var(--ink);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='6.5'/%3E%3Ccircle cx='12' cy='12' r='2' fill='black'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='6.5'/%3E%3Ccircle cx='12' cy='12' r='2' fill='black'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3'/%3E%3C/svg%3E") center/contain no-repeat;}
+  #map .kage-locate a.busy::before{opacity:.45;}
   #map .leaflet-draw-toolbar a.leaflet-disabled::before{background-color:var(--muted);opacity:.55;}
   #map .leaflet-draw-draw-polyline{--kage-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4.5 18.5 10 9l4.5 5.5L19.5 5'/%3E%3Ccircle cx='4.5' cy='18.5' r='1.3' fill='black'/%3E%3Ccircle cx='19.5' cy='5' r='1.3' fill='black'/%3E%3C/svg%3E");}
   #map .leaflet-draw-draw-polygon{--kage-ic:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8 12 4l7 5-2 10H7z'/%3E%3C/svg%3E");}
@@ -1075,6 +1079,17 @@
   #kageSplash svg circle{fill:var(--accent);}
   @keyframes ksIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
   @media (prefers-reduced-motion:reduce){#kageSplash .ks-mark{animation:none;}#kageSplash{transition-duration:.2s;}}
+  /* v110: pin reports */
+  .pin-rep{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:12px;color:var(--body-ink);}
+  .pin-rep .bp-dot{margin-right:0;}
+  .pin-rep .spinner{width:11px;height:11px;}
+  .link-btn{background:none;border:0;padding:0;font:inherit;color:var(--accent-ink);text-decoration:underline;cursor:pointer;}
+  .mp-row .bp-dot{margin-right:0;flex:none;}
+  .mp-row .mp-spin{width:10px;height:10px;border-width:1.5px;}
+  .saved-report-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:var(--checklist-card-bg);}
+  .saved-report-banner b{display:block;font-size:13px;color:var(--ink);}
+  .saved-report-banner span{font-size:11.5px;color:var(--muted);}
+  .bp-saved{font-weight:500;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -1113,11 +1128,8 @@
         <div class="lg-row" data-k="recArea"><span class="sw" style="background:#D66A9E;opacity:.5"></span> Recreation reserve or area</div>
         <div class="lg-row" data-k="spot"><span class="sw" style="background:#2BB3C4"></span> Potential shooting spot</div>
         <div class="lg-row" data-k="gap"><span class="sw" style="background:#8E7DE3"></span> Gap spot (presumed Crown)</div>
-        <div class="lg-row" data-k="restricted"><span class="sw" style="background:#E2685A"></span> Restricted (reason on click)</div>
         <div class="lg-row" data-k="publicRoad"><span class="sw line" style="border-color:#9DA9B3;border-style:solid"></span> Public road</div>
         <div class="lg-row" data-k="highway"><span class="sw line" style="border-color:#D9733A;border-style:solid"></span> Listed major highway</div>
-        <div class="lg-row" data-k="activeCutOutline"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Active cutblock</div>
-        <div class="lg-row" data-k="activeCutBuffer"><span class="sw" style="background:rgba(226,104,90,.2);border:1.5px solid #E2685A"></span> Active cutblock buffer</div>
         <div class="lg-row" data-k="mvClosure"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Motor vehicle closure</div>
         <div class="lg-row" data-k="mvOpen"><span class="sw line" style="border-color:#45A872;border-style:dashed"></span> Motor vehicle route (open)</div>
       </div>
@@ -1237,6 +1249,7 @@
             <div class="ma-row" id="clearMenuRow">
               <button type="button" class="tool-row" id="clearMenuBtn" aria-haspopup="true" aria-expanded="false"><span class="tr-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg></span><span class="tr-txt"><span class="tr-name">Clear</span><span class="tr-sub">Remove a layer from the map</span></span><svg class="tr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
               <div class="clear-menu" id="clearMenu" hidden>
+            <button type="button" class="clear-menu-item clear-all-item" data-key="all">Clear all layers</button>
             <button type="button" class="clear-menu-item" data-key="parcelview">View Parcels</button>
             <button type="button" class="clear-menu-item" data-key="spots">Shooting Spots</button>
             <button type="button" class="clear-menu-item" data-key="roadview">Reveal Road</button>
@@ -1556,9 +1569,9 @@ document.getElementById('checklistInfoBtn').addEventListener('click', () => open
 // use), so the old Crown-Land-specific name no longer described it.
 // v109: one "i" beside the Layer Functions label covers all four tools.
 const TOOLS_HELP_HTML = `<h4 style="margin-top:0">View Parcels</h4><div class="mrow">Draws every parcel in the current view, coloured by ownership (see the map key). It only covers what's on screen, so press it again after you move the map.</div>
-<h4>Shooting Spots</h4><div class="mrow">Finds Crown land in the current view that passes every automatic check: outside parks and municipalities, and clear of private land and road buffers. The same search runs on its own within 2&nbsp;km of every location you pick.</div><div class="mrow">Teal is a potential spot. Red is excluded; click it for the reason. Purple is land with no parcel record, presumed Crown. Wide views need zooming in first.</div>
+<h4>Shooting Spots</h4><div class="mrow">Finds Crown land in the current view that passes every automatic check: outside parks and municipalities, and clear of private land and road buffers. The same search runs on its own within 2&nbsp;km of every location you pick.</div><div class="mrow">Only places where shooting may be possible are drawn: teal is a potential spot, purple is land with no parcel record, presumed Crown. Click one for advisories such as nearby active logging. Wide views need zooming in first.</div>
 <h4>Reveal Road</h4><div class="mrow">Draws public roads and forest service roads in the current view. Hover a road for its class, status and buffer distance.</div>
-<h4>Clear</h4><div class="mrow">Removes one layer or report section from the map and leaves everything else. Your own markup is never cleared.</div>`;
+<h4>Clear</h4><div class="mrow">Removes one layer or report section from the map and leaves everything else, or use Clear all layers to remove everything the app drew. Your pin, report and own markup are never cleared by Clear all.</div>`;
 
 // v103: dark/light toggle's own "i", same pattern as every other button
 // here, just explaining what the two states are and that the choice sticks.
@@ -1636,7 +1649,8 @@ clearMenuEl.addEventListener('click', e => {
   // so clearReportCategory()'s overlayCategoryLayers/report-card logic
   // doesn't apply to them. See clearMapToolLayer()'s own comment further
   // down for why they need a separate function.
-  if(MAP_TOOL_LAYERS[btn.dataset.key]) clearMapToolLayer(btn.dataset.key, btn.textContent.trim());
+  if(btn.dataset.key === 'all') clearAllResearchLayers();
+  else if(MAP_TOOL_LAYERS[btn.dataset.key]) clearMapToolLayer(btn.dataset.key, btn.textContent.trim());
   else clearReportCategory(btn.dataset.key, btn.textContent.trim());
   closeClearMenu();
 });
@@ -1993,7 +2007,10 @@ if(typeof L === 'undefined' || window.__leafletLoadFailed){
   throw new Error('Leaflet failed to load from cdnjs.cloudflare.com, see the on-page message shown in #mapWrap.');
 }
 
-const map = L.map('map').setView([54.5, -125.5], 5);
+// v110: opens framed on BC itself (BC_BOUNDS in src/config/constants.js)
+// rather than a fixed zoom that showed most of North America on wide screens.
+const map = L.map('map', {zoomSnap: 0.25});
+map.fitBounds(BC_BOUNDS, {padding: [10, 10]});
 
 // Map Tab Sync extension bridge, lets the browser extension snap this
 // map to another tab's exact position/zoom (e.g. onX Hunt), instead of
@@ -2388,6 +2405,56 @@ document.getElementById('spotsCancelBtn').addEventListener('click', cancelSpotsS
 // KAGE wordmark links home (see KAGE_HOME_URL in src/config/constants.js)
 document.getElementById('kageHomeLink').setAttribute('href', KAGE_HOME_URL);
 
+// ---------------- your location (v110) ----------------
+// A locate button under the zoom controls, plus one automatic attempt on
+// load: silently when the browser already has permission, and the first
+// time someone visits (one browser prompt, never repeated). Only zooms in
+// when the position is inside BC; it never drops the report pin or runs a
+// lookup, so nothing is queried until the person picks a spot.
+let youAreHere = null;
+function locateUser(manual){
+  if(!navigator.geolocation){ if(manual) setMapActionsNote("This browser can't share your location."); return; }
+  const btn = document.querySelector('.kage-locate a');
+  if(btn) btn.classList.add('busy');
+  navigator.geolocation.getCurrentPosition(pos => {
+    if(btn) btn.classList.remove('busy');
+    const ll = [pos.coords.latitude, pos.coords.longitude];
+    const inBC = ll[0] >= BC_BOUNDS[0][0] && ll[0] <= BC_BOUNDS[1][0] && ll[1] >= BC_BOUNDS[0][1] && ll[1] <= BC_BOUNDS[1][1];
+    if(!inBC){ if(manual) setMapActionsNote("Your location is outside BC, so the map stays on BC."); return; }
+    if(youAreHere) map.removeLayer(youAreHere);
+    youAreHere = L.circleMarker(ll, {radius: 6, color: '#ffffff', weight: 2, fillColor: '#3B82F6', fillOpacity: 1, interactive: false}).addTo(map);
+    map.flyTo(ll, LOCATE_ZOOM, {duration: 1.2});
+  }, () => {
+    if(btn) btn.classList.remove('busy');
+    if(manual) setMapActionsNote("Couldn't get your location. Check that location access is allowed for this site.");
+  }, {enableHighAccuracy: false, timeout: 10000, maximumAge: 600000});
+}
+(function addLocateControl(){
+  const Locate = L.Control.extend({
+    options: {position: 'topleft'},
+    onAdd(){
+      const wrap = L.DomUtil.create('div', 'leaflet-bar kage-locate');
+      const a = L.DomUtil.create('a', '', wrap);
+      a.href = '#'; a.title = 'Zoom to my location'; a.setAttribute('role', 'button'); a.setAttribute('aria-label', 'Zoom to my location');
+      L.DomEvent.on(a, 'click', e => { L.DomEvent.stop(e); locateUser(true); });
+      L.DomEvent.disableClickPropagation(wrap);
+      return wrap;
+    }
+  });
+  map.addControl(new Locate());
+})();
+(function autoLocate(){
+  if(!navigator.geolocation) return;
+  let asked = false;
+  try{ asked = localStorage.getItem(GEO_ASKED_KEY) === '1'; }catch(e){}
+  const go = () => { try{ localStorage.setItem(GEO_ASKED_KEY, '1'); }catch(e){} setTimeout(() => locateUser(false), 1800); };
+  if(navigator.permissions && navigator.permissions.query){
+    navigator.permissions.query({name: 'geolocation'}).then(p => {
+      if(p.state === 'granted' || (p.state === 'prompt' && !asked)) go();
+    }).catch(() => { if(!asked) go(); });
+  } else if(!asked) go();
+})();
+
 (function fadeSplash(){
   const el = document.getElementById('kageSplash');
   if(!el) return;
@@ -2447,8 +2514,62 @@ function markupPopupHtml(item){
   return `<div style="font-size:12.5px;line-height:1.6;min-width:150px">
     <b>${esc(item.name || markupKindIcon(item.kind))}</b>
     ${item.notes ? `<br>${esc(item.notes).replace(/\n/g,'<br>')}` : ''}
-    <br><button type="button" class="small-btn" style="margin-top:7px;font-size:11px;padding:3px 9px;" onclick="openMarkupEditor('${item.id}')">Edit</button>
+    ${pinReportLine(item)}
+    <div style="display:flex;gap:6px;margin-top:7px">${item.report && item.report.status === 'done' ? `<button type="button" class="small-btn" style="font-size:11px;padding:3px 9px;" onclick="showPinReport('${item.id}')">View report</button>` : ''}<button type="button" class="small-btn" style="font-size:11px;padding:3px 9px;" onclick="openMarkupEditor('${item.id}')">Edit</button></div>
   </div>`;
+}
+// ---- v110: every markup pin carries a full location report ----
+// When a pin is dropped (or moved), the same queries as a normal lookup run
+// for the pin's own spot, quietly, and the finished report is saved on the
+// pin (item.report) and in this browser's markup storage. Opening it shows
+// that saved report in the report panel, with a button to check again.
+async function attachPinReport(item){
+  if(!item || item.kind !== 'marker') return;
+  const ll = item.layer.getLatLng();
+  const token = item.reportToken = (item.reportToken || 0) + 1;
+  item.report = {status: 'checking'};
+  renderMarkupList();
+  try{
+    const data = await fetchLocationData(ll.lat, ll.lng);
+    if(token !== item.reportToken || !findMarkupItem(item.id)) return;
+    const r = renderReport(data, {snapshot: true});
+    item.report = Object.assign({status: 'done', checkedAt: new Date().toISOString(), lat: ll.lat, lng: ll.lng}, r);
+  }catch(e){
+    if(token !== item.reportToken) return;
+    item.report = {status: 'failed'};
+  }
+  renderMarkupList();
+  saveMarkupToStorage();
+  if(item.layer.isPopupOpen && item.layer.isPopupOpen()) item.layer.setPopupContent(markupPopupHtml(item));
+}
+function pinReportLine(item){
+  const r = item.report;
+  if(!r || item.kind !== 'marker') return '';
+  if(r.status === 'checking') return `<div class="pin-rep checking"><span class="spinner"></span>Checking this spot…</div>`;
+  if(r.status !== 'done') return `<div class="pin-rep">Report unavailable. <button type="button" class="link-btn" onclick="attachPinReport(findMarkupItem('${item.id}'))">Try again</button></div>`;
+  return `<div class="pin-rep"><span class="bp-dot ${r.level}"></span>${esc(r.label)}</div>`;
+}
+function fmtCheckedAt(iso){
+  try{ return new Date(iso).toLocaleString('en-CA', {year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}); }catch(e){ return iso; }
+}
+function showPinReport(id){
+  const item = findMarkupItem(id);
+  if(!item || !item.report || item.report.status !== 'done') return;
+  const r = item.report;
+  map.closePopup();
+  document.getElementById('report').innerHTML = `<div class="saved-report-banner"><div><b>${esc(item.name || 'Pin')}</b><span>Saved report, checked ${esc(fmtCheckedAt(r.checkedAt))}</span></div><button type="button" class="small-btn" onclick="recheckPin('${item.id}')">Check again</button></div>` + r.html;
+  document.getElementById('bottomPanelSummary').innerHTML = `<span class="bp-dot ${r.level}"></span>${esc(r.label)} <span class="bp-saved">(${esc(item.name || 'pin')})</span>`;
+  openBottomPanel();
+  renderChecklist(r.autoOk);
+  openRightPanel('sideChecklist');
+  if(r.bylaw){ const src = findBylawSource(r.bylaw); if(src) renderBylawLookup(r.bylaw, src); }
+}
+async function recheckPin(id){
+  const item = findMarkupItem(id);
+  if(!item) return;
+  document.getElementById('report').innerHTML = `<div class="loading"><span class="spinner"></span> Checking ${esc(item.name || 'this pin')} again…</div>`;
+  await attachPinReport(item);
+  if(item.report && item.report.status === 'done') showPinReport(id);
 }
 function addMarkupItem(layer, kind, opts){
   opts = opts || {};
@@ -2464,6 +2585,7 @@ function addMarkupItem(layer, kind, opts){
     // branch, so this stays undefined/unused rather than needing its own
     // kind-guard here.
     icon: opts.icon && MARKUP_ICONS_BY_ID[opts.icon] ? opts.icon : null,
+    report: kind === 'marker' && opts.report && opts.report.status === 'done' ? opts.report : null,
     layer
   };
   markupLayer.addLayer(layer);
@@ -2480,7 +2602,7 @@ function renderMarkupList(){
   if(!markupItems.length){ el.innerHTML = `<div class="mp-empty">Nothing added yet.</div>`; return; }
   el.innerHTML = markupItems.map(item => `<div class="mp-row" data-id="${item.id}">
       <span class="${item.kind === 'marker' ? 'mp-sw' : 'mp-sw line'}" style="background:${item.color}"></span>
-      <span class="mp-name">${esc(item.name || markupKindIcon(item.kind))}</span>
+      <span class="mp-name">${esc(item.name || markupKindIcon(item.kind))}</span>${item.report ? (item.report.status === 'done' ? `<span class="bp-dot ${item.report.level}" title="${esc(item.report.label)}"></span>` : item.report.status === 'checking' ? '<span class="spinner mp-spin"></span>' : '') : ''}
       <button type="button" class="mp-edit" data-edit="${item.id}" title="Edit" aria-label="Edit"><svg class="ui-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>
     </div>`).join('');
 }
@@ -2648,8 +2770,13 @@ if(typeof L.Control !== 'undefined' && typeof L.Control.Draw !== 'undefined' && 
     renderMarkupList();
     saveMarkupToStorage();
     openMarkupEditor(item.id); // name it right away, onX-style
+    attachPinReport(item); // v110: runs in the background while it's being named
   });
-  map.on(L.Draw.Event.EDITED, () => saveMarkupToStorage()); // geometry lives on item.layer itself, nothing else to update
+  map.on(L.Draw.Event.EDITED, e => {
+    saveMarkupToStorage(); // geometry lives on item.layer itself
+    // v110: a pin that moved gets a fresh report for its new spot
+    e.layers.eachLayer(layer => { const item = markupItems.find(m => m.layer === layer); if(item && item.kind === 'marker') attachPinReport(item); });
+  });
   map.on(L.Draw.Event.DELETED, e => {
     e.layers.eachLayer(layer => {
       markupItems = markupItems.filter(m => m.layer !== layer);
@@ -2669,7 +2796,7 @@ function markupItemToFeature(item){
   // loadMarkupFromFeatureCollection() below treats a missing `icon` key the
   // same as a null one, so files exported by every pre-v93 version of this
   // app still import cleanly as plain, icon-less pins.
-  return {type:"Feature", geometry: geo.geometry, properties:{id:item.id, kind:item.kind, name:item.name, notes:item.notes, color:item.color, icon:item.icon || null}};
+  return {type:"Feature", geometry: geo.geometry, properties:{id:item.id, kind:item.kind, name:item.name, notes:item.notes, color:item.color, icon:item.icon || null, report: item.report && item.report.status === 'done' ? item.report : null}};
 }
 function saveMarkupToStorage(){
   try{
@@ -2695,7 +2822,7 @@ function loadMarkupFromFeatureCollection(fc, opts){
     const kind = p.kind || (f.geometry.type === "Point" ? "marker" : f.geometry.type === "LineString" ? "polyline" : "polygon");
     addMarkupItem(layer, kind, {
       id: opts.regenerateIds ? null : p.id,
-      name: p.name, notes: p.notes, color: p.color, icon: p.icon
+      name: p.name, notes: p.notes, color: p.color, icon: p.icon, report: p.report
     });
     added++;
   });
@@ -2946,6 +3073,16 @@ async function runLookup(lat, lng){
   document.getElementById('bottomPanelSummary').textContent = "Checking this location…";
   openBottomPanel(); // surface the report drawer the moment a check starts, since that's the whole point of clicking a spot
 
+  const data = await fetchLocationData(lat, lng);
+  setSearchStatus(`Last checked: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+  renderMapOverlays(data);
+  renderReport(data);
+}
+
+// v110: every query a location report needs, with no drawing and no DOM
+// writes, so markup pins can capture a full report for their own spot
+// (see attachPinReport()) without moving the main pin or redrawing the map.
+async function fetchLocationData(lat, lng){
   const [parcelR, muniR, parkR, cutR, tenureR, woodlotR, harvestR, roadR, open511R, cutPlanR, nearbyParcelR, recSiteR, recPolyR, recLineR, mvprRoutesR, mvprAreasR, wmaR, muR] = await Promise.all([
     queryLayer(LAYERS.parcel.typeName, cqlFor('parcel', lat, lng)),
     queryLayer(LAYERS.muni.typeName, cqlFor('muni', lat, lng)),
@@ -2978,8 +3115,6 @@ async function runLookup(lat, lng){
     queryLayer(LAYERS.mu.typeName, cqlFor('mu', lat, lng))
   ]);
 
-  setSearchStatus(`Last checked: ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
-
   // Join Consolidated Cutblocks to RESULTS openings by OPENING_ID, it's
   // the layer that actually carries a harvest *completion* date; RESULTS'
   // own OPENING_STATUS_CODE has no such date on it. Built once, used by
@@ -3006,8 +3141,7 @@ async function runLookup(lat, lng){
   // list, see buildMvprList() below.
   const mvprList = buildMvprList(mvprRoutesR, mvprAreasR);
 
-  renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, roadR, nearbyParcelR, recList, mvprList, wmaR, muR});
-  renderReport({lat, lng, parcelR, muniR, parkR, cutR, cutPlanR, cutList, tenureR, woodlotR, roadR, open511R, nearbyParcelR, recSiteR, recPolyR, recLineR, recList, mvprRoutesR, mvprAreasR, mvprList, wmaR, muR});
+  return {lat, lng, parcelR, muniR, parkR, cutR, cutPlanR, cutList, tenureR, woodlotR, roadR, open511R, nearbyParcelR, recSiteR, recPolyR, recLineR, recList, mvprRoutesR, mvprAreasR, mvprList, wmaR, muR};
 }
 
 // ---------------- map highlighting ----------------
@@ -4327,7 +4461,7 @@ function spotDetailHtml(advisories, clipped, infraChecked, hadSpecialRoute){
   // which one applied.
   let bufferNote;
   if(clipped){
-    bufferNote = `This shape is the part of the parcel clear of every restriction checked (park, municipality${infraChecked ? `, ${BUILDING_BUFFER_M}m from private land, ${DEFAULT_ROAD_BUFFER_M}m from roads${hadSpecialRoute ? `, ${SPECIAL_ROUTE_BUFFER_M}m near a listed major highway` : ''}` : '; zoom in to also check the road and private-land buffers'}). The red area nearby shows why the rest was excluded. Buffer distances are set above the legal minimums (100m from occupied buildings, 15m road allowance, 400m listed highways) and are not the law itself. Check for occupied buildings and livestock on site.`;
+    bufferNote = `This shape is the part of the parcel clear of every restriction checked (park, municipality${infraChecked ? `, ${BUILDING_BUFFER_M}m from private land, ${DEFAULT_ROAD_BUFFER_M}m from roads${hadSpecialRoute ? `, ${SPECIAL_ROUTE_BUFFER_M}m near a listed major highway` : ''}` : '; zoom in to also check the road and private-land buffers'}). The rest of the parcel didn't pass one of these checks. Buffer distances are set above the legal minimums (100m from occupied buildings, 15m road allowance, 400m listed highways) and are not the law itself. Check for occupied buildings and livestock on site.`;
   } else if(!infraChecked){
     bufferNote = `Zoom in further to also check this shape against the road and private-land buffers.`;
   } else {
@@ -4610,6 +4744,18 @@ const MAP_TOOL_LAYERS = {
   spots: () => { spotLayer.clearLayers(); spotDetails = []; gapDetails = []; restrictedDetails = []; },
   roadview: () => { roadViewLayer.clearLayers(); },
 };
+// v110: one action that removes every layer the app drew (View Parcels,
+// Shooting Spots, Reveal Road and every report category's shapes), and
+// stops a spots search still running so it can't redraw afterwards. The
+// pin, the report text and your own markup are left alone.
+function clearAllResearchLayers(){
+  spotSeq++; // any spots search still in flight drops its results
+  endSpotsProgress({el: document.getElementById('spotsProgress'), label: document.getElementById('spotsProgressLabel')});
+  Object.keys(MAP_TOOL_LAYERS).forEach(k => MAP_TOOL_LAYERS[k]());
+  Object.keys(overlayCategoryLayers).forEach(k => overlayCategoryLayers[k].clearLayers());
+  currentClickableFeatures = currentClickableFeatures.filter(e => !(e.source in MAP_TOOL_LAYERS) && !String(e.source).startsWith('overlay:'));
+  setMapActionsNote('All map layers cleared. Your pin, report and markup are unchanged.');
+}
 function clearMapToolLayer(key, label){
   MAP_TOOL_LAYERS[key]();
   currentClickableFeatures = currentClickableFeatures.filter(e => e.source !== key);
@@ -4845,7 +4991,10 @@ function cardHTML(key, icon, title, pillHtml, bodyHtml, collapsible, flag){
   </div>`;
 }
 
-function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR,woodlotR,roadR,open511R,nearbyParcelR,recSiteR,recPolyR,recLineR,recList,mvprRoutesR,mvprAreasR,mvprList,wmaR,muR}){
+// v110: opts.snapshot builds the same report but returns it ({html, level,
+// label, bylaw, autoOk}) instead of writing it to the page.
+function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR,woodlotR,roadR,open511R,nearbyParcelR,recSiteR,recPolyR,recLineR,recList,mvprRoutesR,mvprAreasR,mvprList,wmaR,muR}, opts){
+  const snapshot = !!(opts && opts.snapshot);
   const reasons = {red:[], amber:[], green:[], gray:[]};
   let html = "";
   let bylawJurisdiction = null; // {name, kind}, filled in below once we know what's here
@@ -5170,7 +5319,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
       // delegation further down (see the #report mouseover/mouseout
       // listeners) so pointing at a list row highlights that same cutblock's
       // shape on the map.
-      currentCutOpenings = cutList;
+      if(!snapshot) currentCutOpenings = cutList;
       body = currentCutOpenings.map((entry, i) => {
         const idLabel = entry.openingId != null ? `Opening <b>${esc(entry.openingId)}</b>` : (entry.cutBlockId ? `Block <b>${esc(entry.cutBlockId)}</b>` : "Cutblock");
         const dateBit = entry.harvestEndDate ? `completed <b>${fmtDate(entry.harvestEndDate)}</b>`
@@ -5308,10 +5457,6 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
   }
   verdictHtml += `<div class="fine-print">This is a preliminary read of a handful of public datasets only, it is <b>not</b> a determination that shooting here is legal, and it does not replace the manual checklist below.</div></div>`;
 
-  document.getElementById('report').innerHTML = verdictHtml + html;
-  document.getElementById('bottomPanelSummary').innerHTML = `<span class="bp-dot ${level}"></span>${label}`;
-  openBottomPanel(); // re-open in case a manual collapse happened mid-query
-
   // ---- auto checklist items merged above manual list ----
   // v77: Done/Incomplete only says whether each check actually ran, what
   // it found lives once, in that item's own report card, one "See report"
@@ -5332,6 +5477,16 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
     woodlot: !!(woodlotR && woodlotR.ok),
     road: !!(roadR && roadR.ok),
   };
+  if(snapshot){
+    // Cutblock rows open details from the live lookup's list, which a saved
+    // report doesn't have, so they become plain rows.
+    const snapHtml = (verdictHtml + html).replace(/ onclick="showCutblockDetail\(\d+\)"/g, '').replace(/ data-cutblock-idx="\d+"/g, '').replace(/<span class="chev">details ›<\/span>/g, '');
+    return {html: snapHtml, level, label, autoOk, bylaw: bylawJurisdiction ? bylawJurisdiction.name : null};
+  }
+  document.getElementById('report').innerHTML = verdictHtml + html;
+  document.getElementById('bottomPanelSummary').innerHTML = `<span class="bp-dot ${level}"></span>${label}`;
+  openBottomPanel(); // re-open in case a manual collapse happened mid-query
+
   renderChecklist(autoOk);
   openRightPanel('sideChecklist'); // v109: the checklist comes up alongside every finished report
 
