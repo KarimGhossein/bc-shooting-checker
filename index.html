@@ -5208,7 +5208,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
     } else {
       const bans = closedR.hits.filter(f => closedAreaBans(f.properties));
       const limits = closedR.hits.filter(f => !closedAreaBans(f.properties));
-      const zoneHtml = f => { const p = f.properties; const offSeason = p.season && !closedAreaInSeason(p); return `<div class="field"><b>${esc(p.name)}</b>: ${esc(CLOSED_AREA_KIND_LABEL[p.kind] || p.kind)}${p.crownOnly ? ' on Crown land' : ''}${p.season ? `, ${esc(fmtSeason(p.season))}${offSeason ? ' (not in effect today)' : ''}` : ''}</div><div class="status-line">${esc(p.summary)}${p.approx ? ` Approximate: ${esc(p.approx)}` : ''} <span style="color:var(--muted)">${esc(p.cite)}.</span></div>`; };
+      const zoneHtml = f => { const p = f.properties; const offSeason = p.season && !closedAreaInSeason(p); return `<div class="field"><b>${esc(p.name)}</b>: ${esc(CLOSED_AREA_KIND_LABEL[p.kind] || p.kind)}${p.crownOnly ? ' on Crown land' : ''}${p.season ? `, ${esc(fmtSeason(p.season))}${offSeason ? ' (not in effect today)' : ''}` : ''}</div><div class="status-line">${esc(p.summary)}${esc(closedAreaHuntingNote(p))}${p.approx ? ` Approximate: ${esc(p.approx)}` : ''} <span style="color:var(--muted)">${esc(p.cite)}.</span></div>`; };
       body += closedR.hits.map(zoneHtml).join('');
       if(closedR.unmappedNear.length){
         body += `<div class="status-line" style="margin-top:6px"><b>Nearby areas not drawn on the map yet</b> (boundaries described in words only, so this point may or may not be inside):</div>` + closedR.unmappedNear.map(u => `<div class="field"><b>${esc(u.name)}</b>: ${esc(CLOSED_AREA_KIND_LABEL[u.kind] || u.kind)}. ${esc(u.summary)} <span style="color:var(--muted)">${esc(u.cite)}.</span></div>`).join('');
@@ -5217,7 +5217,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
       if(bans.length){
         const p = bans[0].properties;
         pill = `<span class="hit-pill on">${esc(CLOSED_AREA_KIND_LABEL[p.kind])}</span>`;
-        addReason('red', `This point is inside the <b>${esc(p.name)}</b> ${esc((CLOSED_AREA_KIND_LABEL[p.kind] || '').toLowerCase())} under the Wildlife Act${p.crownOnly ? ' (applies to Crown land)' : ''}. ${esc(p.summary)}`);
+        addReason('red', `This point is inside the <b>${esc(p.name)}</b> ${esc((CLOSED_AREA_KIND_LABEL[p.kind] || '').toLowerCase())} under the Wildlife Act${p.crownOnly ? ' (applies to Crown land)' : ''}. ${esc(p.summary)}${esc(closedAreaHuntingNote(p))}`);
       } else if(limits.length){
         const p = limits[0].properties; const off = p.season && !closedAreaInSeason(p);
         pill = `<span class="hit-pill" style="background:var(--amber-bg);color:var(--amber)">${off ? 'seasonal, not in effect' : esc(CLOSED_AREA_KIND_LABEL[p.kind])}</span>`;

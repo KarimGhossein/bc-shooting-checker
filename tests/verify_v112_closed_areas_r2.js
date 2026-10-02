@@ -56,6 +56,13 @@ const ROOT = path.resolve(__dirname, '..');
     // spots exclusion list
     const bans = await closedAreaBansInBbox([-121.95, 49.0, -121.85, 49.1]);
     out.spotsBans = bans.some(f => f.properties.id === 'cars51-3') && bans.every(f => ['no_shooting', 'no_shooting_hunting'].includes(f.properties.kind));
+    // v112b: Squamish River Valley (Sch. 5.1 s. 13, Synopsis Map B11): 800 m west / 400 m east of the FSR
+    const sq = (lat, lng) => closedAreasForPoint(lat, lng).then(x => x.hits.some(f => f.properties.id === 'cars51-13'));
+    out.squamish = await sq(49.99663, -123.3317) && !(await sq(49.99663, -123.31493)) && await sq(49.91263, -123.31208) && !(await sq(49.92892, -123.35236))
+      && !data.unmapped.some(u => u.sched === '5.1' && u.item === '13');
+    const sqA = await closedAreasForPoint(49.99663, -123.3317);
+    const rep4 = renderReport(Object.assign({}, base, { lat: 49.99663, lng: -123.3317, muR: mu('2-6'), closedR: sqA }), { snapshot: true });
+    out.squamishReport = rep4.level === 'red' && /Squamish River Valley/.test(rep4.html) && /hunting and trapping are still allowed/.test(rep4.html);
     out.legend = !!document.querySelector('.lg-row[data-k="closedBan"]') && !!LEGEND_MEANINGS.closedBan;
     return out;
   });

@@ -24,6 +24,11 @@ const CLOSED_AREA_KIND_LABEL = {
 // Kinds that rule out shooting entirely (when in season). The others only
 // limit what you may shoot with.
 const CLOSED_AREA_BANS = ['no_shooting', 'no_shooting_hunting'];
+// Schedule 5.1 areas (specified Crown land, mostly road corridors) stop
+// target and other non-hunting shooting; the Synopsis notes lawful hunting
+// and trapping may still discharge firearms there.
+const CLOSED_AREA_HUNTING_NOTE = 'Lawful hunting and trapping are still allowed; target and other recreational shooting is not.';
+function closedAreaHuntingNote(p){ return p && p.huntingOk ? ' ' + CLOSED_AREA_HUNTING_NOTE : ''; }
 
 let closedAreasPromise = null;
 function loadClosedAreas(){
@@ -84,7 +89,7 @@ function closedAreaStyle(props){
 }
 function closedAreaPopup(p){
   const season = p.season ? `<br>In effect ${esc(fmtSeason(p.season))} each year${closedAreaInSeason(p) ? '' : ' (not in effect today)'}` : '';
-  return `<div style="font-size:12.5px;line-height:1.6;min-width:210px;max-width:280px"><b>${esc(p.name)}</b><br>${esc(CLOSED_AREA_KIND_LABEL[p.kind] || p.kind)}${p.crownOnly ? ' (Crown land)' : ''}${season}<br><span style="color:var(--muted)">${esc(p.summary)}</span>${p.approx ? `<br><span style="color:var(--muted);font-size:11px">Approximate: ${esc(p.approx)}</span>` : ''}<br><span style="color:var(--muted);font-size:11px">${esc(p.cite)}</span></div>`;
+  return `<div style="font-size:12.5px;line-height:1.6;min-width:210px;max-width:280px"><b>${esc(p.name)}</b><br>${esc(CLOSED_AREA_KIND_LABEL[p.kind] || p.kind)}${p.crownOnly ? ' (Crown land)' : ''}${season}<br><span style="color:var(--muted)">${esc(p.summary)}${esc(closedAreaHuntingNote(p))}</span>${p.approx ? `<br><span style="color:var(--muted);font-size:11px">Approximate: ${esc(p.approx)}</span>` : ''}<br><span style="color:var(--muted);font-size:11px">${esc(p.cite)}</span></div>`;
 }
 function fmtSeason(s){
   const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
