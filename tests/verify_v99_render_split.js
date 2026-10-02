@@ -139,7 +139,7 @@ const ROOT = path.resolve(__dirname, '..');
   })();
 
   const pass = results.overlayCategoryKeysType === 'array'
-    && results.overlayCategoryKeysLen === 12 // v109: + mu
+    && results.overlayCategoryKeysLen === 13 // v109: + mu
     && results.overlayCategoryLayersType === 'object'
     && results.renderForestServiceRoadsType === 'function'
     && results.renderMapOverlaysType === 'function'

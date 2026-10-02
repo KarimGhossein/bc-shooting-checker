@@ -57,7 +57,7 @@
 // without touching the other nine. Rebuilt fresh and empty at the top of
 // every renderMapOverlays() call, each new click starts every category
 // over from nothing, same as before.
-const OVERLAY_CATEGORY_KEYS = ['parcel','municipality','park','reserve','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road'];
+const OVERLAY_CATEGORY_KEYS = ['parcel','municipality','park','reserve','closed','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road'];
 let overlayCategoryLayers = {};
 
 // v85: pulled out of renderMapOverlays()'s own inline forEach so Reveal Road
@@ -159,7 +159,7 @@ function cutblockHighlightStyle(color){ return {color, weight:3, fillColor:color
 // actually returned something, registering each drawn feature with the
 // shared chooser (pushClickable()) so overlapping/adjacent features surface
 // a "N records here" choice instead of silently hiding all but the topmost.
-function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, roadR, nearbyParcelR, recList, mvprList, wmaR, muR, reserveR}){
+function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, roadR, nearbyParcelR, recList, mvprList, wmaR, muR, reserveR, closedR}){
   let fitLayer = null;
   // v79: rebuilt fresh for this lookup, see currentClickableFeatures' own
   // declaration in src/map/chooser.js for why this exists and how it's used
@@ -351,6 +351,12 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
   if(reserveR && reserveR.ok && reserveR.features.length){
     currentPushSource = 'overlay:reserve';
     drawReserveFeatures(reserveR.features, overlayCategoryLayers.reserve);
+  }
+
+  // v112: Wildlife Act closed areas within a few km of the point
+  if(closedR && closedR.ok && closedR.nearby.length){
+    currentPushSource = 'overlay:closed';
+    drawClosedAreaFeatures(closedR.nearby, overlayCategoryLayers.closed);
   }
 
   if(parkR.ok && parkR.features.length){
@@ -958,6 +964,8 @@ async function runPotentialSpotsSearch(area){
     // instead, and the buffer below uses private-titled parcels only.
   ], progressUi, SPOTS_QUERY_LABELS);
   const results = await Promise.all(allQueries);
+  // v112: Wildlife Act closed areas that ban shooting today are excluded like parks
+  const closedBans = await closedAreaBansInBbox((() => { const sw = bounds.getSouthWest(), ne = bounds.getNorthEast(); return [sw.lng, sw.lat, ne.lng, ne.lat]; })()).catch(() => []);
   endSpotsProgress(progressUi);
   if(seq !== spotSeq) return; // a newer search superseded this one
 
@@ -970,7 +978,7 @@ async function runPotentialSpotsSearch(area){
 
   // v111: reserves are no-go land, so they join the park list (same exclusion
   // for candidate parcels and presumed-Crown gap cells).
-  const parks = (parkRes.ok ? parkRes.features : []).concat(reserveRes && reserveRes.ok ? reserveRes.features : []);
+  const parks = (parkRes.ok ? parkRes.features : []).concat(reserveRes && reserveRes.ok ? reserveRes.features : [], closedBans);
   const munis = muniRes.ok ? muniRes.features : [];
   const tenures = tenureRes.ok ? tenureRes.features : [];
   const woodlots = woodlotRes.ok ? woodlotRes.features : [];

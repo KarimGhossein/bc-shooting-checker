@@ -52,7 +52,7 @@ const STUB = fs.readFileSync(__dirname + '/leaflet-stub.js', 'utf8');
     out.oldMappingFnItemsGone = !document.getElementById('clearParcelsBtn') && !document.getElementById('clearSpotsMenuBtn') && !document.getElementById('clearRoadMenuBtn') && !document.getElementById('clearLocationBtn');
     const menuKeys = Array.from(document.querySelectorAll('#clearMenu .clear-menu-item')).map(b => b.dataset.key).filter(k => k !== 'all'); // v110: 'Clear all layers' sits first
     out.menuKeys = menuKeys;
-    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcelview','spots','roadview','parcel','municipality','bylaw','park','reserve','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road']);
+    out.menuKeysMatchReportCategories = JSON.stringify(menuKeys) === JSON.stringify(['parcelview','spots','roadview','parcel','municipality','bylaw','park','reserve','closed','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road']);
 
     // Build a real report + real map shapes for two categories (tenures,
     // park) via the same functions runLookup() calls, exactly like

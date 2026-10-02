@@ -1113,6 +1113,8 @@
         <div class="lg-row" data-k="muniParcel"><span class="sw" style="background:#B874B8"></span> Municipal parcel</div>
         <div class="lg-row" data-k="fnParcel"><span class="sw" style="background:#6A86D8"></span> First Nations parcel</div>
         <div class="lg-row" data-k="reserve"><span class="sw" style="background:#E2685A;opacity:.85"></span> Indian Reserve (restricted)</div>
+        <div class="lg-row" data-k="closedBan"><span class="sw" style="background:#E2685A;opacity:.6;border:1.5px dashed #E2685A"></span> Wildlife Act no-shooting area</div>
+        <div class="lg-row" data-k="closedLimit"><span class="sw" style="background:#D9A441;opacity:.6;border:1.5px dashed #D9A441"></span> Shotgun-only or no-rifle area</div>
         <div class="lg-row" data-k="muniBoundary"><span class="sw line" style="border-color:#B874B8;border-style:dashed"></span> Municipal boundary</div>
         <div class="lg-row" data-k="park"><span class="sw" style="background:#2EA58B"></span> Park or protected area</div>
         <div class="lg-row" data-k="cutClosed"><span class="sw" style="background:#45A872"></span> Cutblock (closed out)</div>
@@ -1261,6 +1263,7 @@
             <button type="button" class="clear-menu-item" data-key="bylaw">Bylaw Lookup</button>
             <button type="button" class="clear-menu-item" data-key="park">Park / Protected Area</button>
             <button type="button" class="clear-menu-item" data-key="reserve">Indian Reserve</button>
+            <button type="button" class="clear-menu-item" data-key="closed">Wildlife Act Closed Areas</button>
             <button type="button" class="clear-menu-item" data-key="wma">Wildlife Management Area</button>
             <button type="button" class="clear-menu-item" data-key="mu">Management Unit</button>
             <button type="button" class="clear-menu-item" data-key="recreation">Recreation Sites &amp; Trails</button>
@@ -1355,6 +1358,7 @@
 <script src="src/data/wfs.js"></script>
 <script src="src/map/chooser.js"></script>
 <script src="src/map/render.js"></script>
+<script src="src/map/closedareas.js"></script>
 <script>
 // ---------------- info modal ----------------
 // A single reusable popup used everywhere something used to be permanent
@@ -1399,6 +1403,8 @@ function aboutHtml(){
     <div><b>Woodlots and forest licences</b>Forest Tenure Managed Licences</div>
     <div><b>Roads</b>Digital Road Atlas (public roads), FTEN Road Section Lines (forest service roads), DriveBC Open511 (highway events)</div>
     <div><b>Recreation</b>Recreation Sites and Trails BC. There is no open or closed field, so a site on the map may or may not be in use.</div>
+    <div><b>Wildlife Act closed areas</b>Drawn by KAGE from the Closed Areas Regulation (B.C. Reg. 76/84) text, using BC road, stream, lake, island and boundary data. Region 2 so far; some areas there are listed but not drawn yet.</div>
+    <div><b>Indian Reserves</b>Indian Reserves and Band Names (Canada Lands, published by BC)</div>
     <div><b>Motor vehicle closures</b>Motor Vehicle Prohibition Regulation routes and areas. Legal closures only, not road conditions.</div>
     <div><b>Basemaps</b>Mapbox, Esri and OpenStreetMap contributors</div>
   </div>
@@ -2935,6 +2941,7 @@ const AUTO_ITEMS = [
   {id:"park", cardKey:"park", title:"Park / protected area"},
   {id:"wma", cardKey:"wma", title:"Wildlife Management Area"},
   {id:"mu", cardKey:"mu", title:"Management unit and Synopsis"},
+  {id:"closed", cardKey:"closed", title:"Wildlife Act closed areas"},
   {id:"recreation", cardKey:"recreation", title:"Recreation sites/trails"},
   {id:"cutblocks", cardKey:"cutblocks", title:"Forestry activity nearby"},
   {id:"tenures", cardKey:"tenures", title:"Crown land tenures"},
@@ -2942,7 +2949,7 @@ const AUTO_ITEMS = [
   {id:"road", cardKey:"road", title:"Road access & alerts"},
 ];
 const MANUAL_ITEMS = [
-  {id:"wildlife-act", title:"Wildlife Act closed areas"},
+  {id:"wildlife-act", title:"Other Wildlife Act closures"},
   {id:"park-buffer", title:"Parks & recreation sites"},
   {id:"federal-land", title:"Federal land"},
   {id:"safety-distance", title:"Safe backstop & distance"},
@@ -2959,6 +2966,7 @@ const CHECKLIST_ITEM_INFO = {
   parcel: { title: "Parcel ownership", html: `<div class="mrow">Who owns/administers the exact clicked point, private, municipal, First Nations, or provincial/federal Crown, from ParcelMap BC. Private land needs the landowner's permission regardless of anything else; see the Parcel card above for the specific type found here.</div>` },
   municipality: { title: "Municipality", html: `<div class="mrow">Whether the point falls inside an incorporated municipality boundary, from BC Legal Administrative Boundaries. Municipalities typically prohibit or tightly restrict discharge under their own bylaw, see the Discharge bylaw item above.</div>` },
   park: { title: "Park / protected area", html: `<div class="mrow">Whether the point overlaps a Provincial Park, Ecological Reserve, or Protected Area, from BC Parks &amp; Protected Areas data. Discharge is prohibited inside these regardless of anything else this tool checks.</div>` },
+  closed: { title: "Wildlife Act closed areas", html: `<div class="mrow">No-shooting, shotgun-only and no-rifle areas set by the Wildlife Act Closed Areas Regulation, drawn from the regulation's own descriptions. Mapped for Region 2 (Lower Mainland) so far; some Region 2 areas are listed but not drawn yet, and the report names any that may be nearby.</div>` },
   mu: { title: "Management unit and Synopsis", html: `<div class="mrow">The wildlife management unit the point falls in, and a link to the matching regional section of the BC Hunting and Trapping Regulations Synopsis. Seasons, closed areas and other rules there are set by management unit.</div>` },
   wma: { title: "Wildlife Management Area", html: `<div class="mrow">Whether the point falls inside a Wildlife Management Area. Advisory only, not exclusionary, some WMAs carry their own gazetted Wildlife Act access/discharge restrictions and some don't, so a hit means "check that WMA's own Order in Council," not an automatic red flag.</div>` },
   recreation: { title: "Recreation sites/trails", html: `<div class="mrow">Recreation Sites and Trails BC (RSTBC) sites, trails, or reserves within 1&nbsp;km. This layer has no reliable open/closed or occupancy field, so a hit just means people could realistically be nearby, raising the practical safety bar for a backstop even without a direct park overlap.</div>` },
@@ -2966,7 +2974,7 @@ const CHECKLIST_ITEM_INFO = {
   tenures: { title: "Crown land tenures", html: `<div class="mrow">Crown land tenures (leases, licences, permits) overlapping this point, from TANTALIS. Recreational shooting is usually still fine on top of most of these, but check the purpose/status shown and look for posted restrictions from the tenure holder.</div><div class="mrow" style="margin-top:8px">TANTALIS' own data has no field for a tenure's seasonal closure or operating-period dates (e.g. a commercial heli-ski tenure closed to other users Dec&nbsp;1 to Apr&nbsp;1), confirmed by checking its published schema directly. Those conditions live in the tenure's own licence/permit document, not in any open dataset BC publishes, so this app can't check or show them automatically. If the purpose below suggests one might apply (commercial recreation, heli-ski/cat-ski, guide-outfitting), contact <a href="https://www2.gov.bc.ca/gov/content/industry/crown-land-water/crown-land/crown-land-uses" target="_blank" rel="noopener">FrontCounter BC</a> or the tenure holder to confirm.</div>` },
   woodlot: { title: "Forest tenure licence", html: `<div class="mrow">Woodlot licences, community forests, and other managed forest licences overlapping this point. Recreation is normally still allowed, but the licensee may have posted their own access rules.</div>` },
   road: { title: "Road access & alerts", html: `<div class="mrow">Forest service road tenure status (active vs. retired) within 1&nbsp;km, plus live DriveBC highway alerts nearby. Neither is a real‑time feed and DriveBC only covers highways, not backroads, check <a href="https://backroadstatus.com" target="_blank" rel="noopener">backroadstatus.com</a>'s community reports (linked in the report card above) for washouts, gates, or deactivations.</div>` },
-  "wildlife-act": { title: "Wildlife Act closed areas", html: `<div class="mrow">Some regions ban discharge near listed roads or close public access outright, regardless of land ownership, not auto‑checked, since there's no province‑wide spatial dataset for either regulation below.</div><div class="mrow" style="margin-top:8px">Some regions (e.g. the Fraser Valley) have Order‑in‑Council zones under the <a href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/76_84_01" target="_blank" rel="noopener">Closed Areas Regulation</a>. Separately, the <a href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/187_2003" target="_blank" rel="noopener">Public Access Prohibition Regulation</a> (B.C. Reg 187/2003) can close specific areas to all public entry, not just hunting/shooting. Check the current <a href="https://www2.gov.bc.ca/gov/content/sports-culture/recreation/fishing-hunting/hunting/regulations" target="_blank" rel="noopener">hunting &amp; regulations synopsis / WMU maps</a> for anything listed near this area. (The Wildlife Management Area item above is a different, spatially‑mapped thing from either regulation here.)</div>` },
+  "wildlife-act": { title: "Other Wildlife Act closures", html: `<div class="mrow">Some regions ban discharge near listed roads or close public access outright, regardless of land ownership, not auto‑checked, since there's no province‑wide spatial dataset for either regulation below.</div><div class="mrow" style="margin-top:8px">Some regions (e.g. the Fraser Valley) have Order‑in‑Council zones under the <a href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/76_84_01" target="_blank" rel="noopener">Closed Areas Regulation</a>. Separately, the <a href="https://www.bclaws.gov.bc.ca/civix/document/id/complete/statreg/187_2003" target="_blank" rel="noopener">Public Access Prohibition Regulation</a> (B.C. Reg 187/2003) can close specific areas to all public entry, not just hunting/shooting. Check the current <a href="https://www2.gov.bc.ca/gov/content/sports-culture/recreation/fishing-hunting/hunting/regulations" target="_blank" rel="noopener">hunting &amp; regulations synopsis / WMU maps</a> for anything listed near this area. (The Wildlife Management Area item above is a different, spatially‑mapped thing from either regulation here.)</div>` },
   "park-buffer": { title: "Parks & recreation sites", html: `<div class="mrow">Even if the Park item above shows no direct overlap, discharge is prohibited inside BC Parks / Ecological Reserves / Protected Areas. The Recreation sites/trails item's data has no reliable open/closed or occupancy field, so popular sites/trails it doesn't cover can still raise the same practical (and legal) bar for a safe backstop and no‑one‑downrange guarantee.</div>` },
   "federal-land": { title: "Federal land", html: `<div class="mrow">Provincial parcel data doesn't reliably flag federal reserve or military land (Indian reserves, National Parks, DND land), verify separately. Discharging without permission on reserve land is trespass; National Parks and DND land have their own prohibitions.</div>` },
   "safety-distance": { title: "Safe backstop & distance", html: `<div class="mrow">A terrain judgment call no map layer can certify, walk the site, don't rely on the report alone. Federal careless‑use law (Criminal Code s.86) and BC safety provisions require a proper backstop and that you not endanger anyone, including a safe distance from dwellings, roads and trails.</div>` },
@@ -3144,7 +3152,9 @@ async function fetchLocationData(lat, lng){
   // list, see buildMvprList() below.
   const mvprList = buildMvprList(mvprRoutesR, mvprAreasR);
 
-  return {lat, lng, parcelR, muniR, parkR, cutR, cutPlanR, cutList, tenureR, woodlotR, roadR, open511R, nearbyParcelR, recSiteR, recPolyR, recLineR, recList, mvprRoutesR, mvprAreasR, mvprList, wmaR, muR, reserveR};
+  // v112: Wildlife Act closed areas (local data, no network query)
+  const closedR = await closedAreasForPoint(lat, lng).catch(e => ({ok:false, error:String(e)}));
+  return {lat, lng, parcelR, muniR, parkR, cutR, cutPlanR, cutList, tenureR, woodlotR, roadR, open511R, nearbyParcelR, recSiteR, recPolyR, recLineR, recList, mvprRoutesR, mvprAreasR, mvprList, wmaR, muR, reserveR, closedR};
 }
 
 // ---------------- map highlighting ----------------
@@ -3282,6 +3292,8 @@ const LEGEND_MEANINGS = {
   untitledParcel: "Provincial land with no registered title, generally treated as Crown land.",
   fedParcel: "Federal land such as military land or national parks. Usually closed without permission.",
   reserve: "Indian Reserve. Restricted: no shooting or hunting without permission from the First Nation.",
+  closedBan: "No shooting under the Wildlife Act (sometimes only part of the year). Region 2 so far.",
+  closedLimit: "Shotguns only, or no rifles, under the Wildlife Act. Region 2 so far.",
   muniParcel: "Land owned by a municipality.",
   fnParcel: "First Nations land. Permission from the Nation is required.",
   muniBoundary: "Edge of a city, town or district. Local bylaws usually ban or limit shooting inside.",
@@ -5008,7 +5020,7 @@ function cardHTML(key, icon, title, pillHtml, bodyHtml, collapsible, flag){
 
 // v110: opts.snapshot builds the same report but returns it ({html, level,
 // label, bylaw, autoOk}) instead of writing it to the page.
-function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR,woodlotR,roadR,open511R,nearbyParcelR,recSiteR,recPolyR,recLineR,recList,mvprRoutesR,mvprAreasR,mvprList,wmaR,muR,reserveR}, opts){
+function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR,woodlotR,roadR,open511R,nearbyParcelR,recSiteR,recPolyR,recLineR,recList,mvprRoutesR,mvprAreasR,mvprList,wmaR,muR,reserveR,closedR}, opts){
   const snapshot = !!(opts && opts.snapshot);
   const reasons = {red:[], amber:[], green:[], gray:[]};
   let html = "";
@@ -5175,6 +5187,51 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
       addReason('amber', `Inside the <b>${esc(name)}</b> Wildlife Management Area, some WMAs carry their own Wildlife Act access or discharge restrictions on top of everything else checked here. Verify this specific WMA's Order in Council before shooting.`);
     }
     pushCard('wma', '', 'Wildlife Management Area', pill, body, false);
+  }
+
+  // ---- Wildlife Act closed areas (v112) ----
+  // Mapped so far for Region 2 only. A zone that bans shooting (in season) is
+  // red; shot-only / no-rifle zones, seasonal zones out of season, and
+  // not-yet-mapped zones whose reference area covers the point are amber.
+  {
+    let pill, body = '';
+    const muId = (muR && muR.ok && muR.features[0] && muR.features[0].properties) ? String(muR.features[0].properties.WILDLIFE_MGMT_UNIT_ID || '') : '';
+    const inR2 = /^2-/.test(muId) || (!muId && lat > 48.95 && lat < 50.95 && lng > -125.2 && lng < -120.8);
+    if(!closedR || !closedR.ok){
+      pill = `<span class="hit-pill">no data</span>`;
+      body = `<div class="field">Couldn't load the closed area data.</div>`;
+      addReason('gray', "Wildlife Act closed area data couldn't be loaded, check the Hunting and Trapping Synopsis.");
+    } else if(!inR2){
+      pill = `<span class="hit-pill">not mapped here yet</span>`;
+      body = `<div class="field empty">Wildlife Act no-shooting areas are mapped for Region 2 (Lower Mainland) so far. Check the Closed Areas section of the <a href="${SYNOPSIS_LANDING_URL}" target="_blank" rel="noopener">Hunting and Trapping Synopsis</a> for this area.</div>`;
+      addReason('gray', "Wildlife Act no-shooting areas aren't mapped for this region yet, check the Synopsis.");
+    } else {
+      const bans = closedR.hits.filter(f => closedAreaBans(f.properties));
+      const limits = closedR.hits.filter(f => !closedAreaBans(f.properties));
+      const zoneHtml = f => { const p = f.properties; const offSeason = p.season && !closedAreaInSeason(p); return `<div class="field"><b>${esc(p.name)}</b>: ${esc(CLOSED_AREA_KIND_LABEL[p.kind] || p.kind)}${p.crownOnly ? ' on Crown land' : ''}${p.season ? `, ${esc(fmtSeason(p.season))}${offSeason ? ' (not in effect today)' : ''}` : ''}</div><div class="status-line">${esc(p.summary)}${p.approx ? ` Approximate: ${esc(p.approx)}` : ''} <span style="color:var(--muted)">${esc(p.cite)}.</span></div>`; };
+      body += closedR.hits.map(zoneHtml).join('');
+      if(closedR.unmappedNear.length){
+        body += `<div class="status-line" style="margin-top:6px"><b>Nearby areas not drawn on the map yet</b> (boundaries described in words only, so this point may or may not be inside):</div>` + closedR.unmappedNear.map(u => `<div class="field"><b>${esc(u.name)}</b>: ${esc(CLOSED_AREA_KIND_LABEL[u.kind] || u.kind)}. ${esc(u.summary)} <span style="color:var(--muted)">${esc(u.cite)}.</span></div>`).join('');
+      }
+      body += `<div class="status-line" style="margin-top:6px">Built from the Closed Areas Regulation consolidated to ${esc(closedR.meta.consolidatedTo)}: ${closedR.zoneCount} Region 2 areas drawn, ${closedR.unmappedCount} described but not drawn yet. <a href="${closedR.meta.sourceUrl}" target="_blank" rel="noopener">Read the regulation</a>.</div>`;
+      if(bans.length){
+        const p = bans[0].properties;
+        pill = `<span class="hit-pill on">${esc(CLOSED_AREA_KIND_LABEL[p.kind])}</span>`;
+        addReason('red', `This point is inside the <b>${esc(p.name)}</b> ${esc((CLOSED_AREA_KIND_LABEL[p.kind] || '').toLowerCase())} under the Wildlife Act${p.crownOnly ? ' (applies to Crown land)' : ''}. ${esc(p.summary)}`);
+      } else if(limits.length){
+        const p = limits[0].properties; const off = p.season && !closedAreaInSeason(p);
+        pill = `<span class="hit-pill" style="background:var(--amber-bg);color:var(--amber)">${off ? 'seasonal, not in effect' : esc(CLOSED_AREA_KIND_LABEL[p.kind])}</span>`;
+        addReason('amber', off ? `Inside the <b>${esc(p.name)}</b> seasonal closure, which is not in effect today (${esc(fmtSeason(p.season))}).` : `Inside the <b>${esc(p.name)}</b> area: ${esc((CLOSED_AREA_KIND_LABEL[p.kind] || '').toLowerCase())}. ${esc(p.summary)}`);
+      } else if(closedR.unmappedNear.length){
+        pill = `<span class="hit-pill" style="background:var(--amber-bg);color:var(--amber)">check nearby areas</span>`;
+        addReason('amber', `Near ${closedR.unmappedNear.length === 1 ? 'a Wildlife Act closed area' : closedR.unmappedNear.length + ' Wildlife Act closed areas'} whose boundary isn't drawn yet (${closedR.unmappedNear.map(u => esc(u.name)).join(', ')}). Check the description before shooting.`);
+      } else {
+        pill = `<span class="hit-pill off">none mapped here</span>`;
+        if(!closedR.hits.length) body = `<div class="field empty">Not inside any mapped Wildlife Act no-shooting area.</div>` + body;
+        addReason('green', 'Not inside any mapped Wildlife Act no-shooting area.');
+      }
+    }
+    pushCard('closed', '', 'Wildlife Act closed areas', pill, body, true);
   }
 
   // ---- Management unit (v109) ----
@@ -5505,6 +5562,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
     park: !!parkR.ok,
     wma: !!(wmaR && wmaR.ok),
     mu: !!(muR && muR.ok),
+    closed: !!(closedR && closedR.ok),
     recreation: !!recOk,
     cutblocks: !!cutListOk,
     tenures: !!(tenureR && tenureR.ok),

@@ -168,7 +168,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.tbTitleStyle.font.includes('Hanken Grotesk')
     && results.tbTitleStyle.style !== 'italic'
     && results.allCriticalIdsPresent
-    && results.clearMenuItemCount === 16
+    && results.clearMenuItemCount === 17
     && results.toolsDrawerOpens === true
     && results.toolsDrawerCloses === true
     && diskCheck.noSpaceGrotesk && diskCheck.noOldNavyBlue && diskCheck.noOldAccentBlue
