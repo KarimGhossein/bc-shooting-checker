@@ -61,6 +61,12 @@ const ROOT = path.resolve(__dirname, '..');
     out.realBlockText = cutblockStateText(real);
     out.realBlockLabelled = out.realBlockText === 'Harvested 2022, replanted 2025, permit still open';
 
+    // v110e: FTEN-only block, cut 2005 to 2007, permit RETIRED -> green
+    const fenOnly = buildCutblockList({ ok: true, features: [] },
+      { ok: true, features: [{ properties: { CUT_BLOCK_ID: 'B', LIFE_CYCLE_STATUS_CODE: 'RETIRED', HARVEST_AUTH_STATUS_CODE: 'HC', DISTURBANCE_START_DATE: '2005-10-03Z', DISTURBANCE_END_DATE: '2007-05-26Z' }, geometry: null }] }, {})[0];
+    out.fentenOnlyHarvestedIsGreen = cutblockColor(fenOnly) === MAP_PAL.clear;
+    out.startedNotFinishedIsRed = cutblockColor({ disturbanceStart: '2026-05-01' }) === MAP_PAL.restricted;
+
     // ---- pin reports ----
     const okEmpty = { ok: true, features: [] };
     const fake = { lat: 49.5, lng: -121.5, parcelR: okEmpty, muniR: okEmpty, parkR: okEmpty, cutR: okEmpty, cutPlanR: okEmpty, cutList: [],

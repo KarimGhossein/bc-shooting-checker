@@ -126,7 +126,11 @@ function cutblockStateText(entry){
   return 'Not started';
 }
 function cutblockColor(entry){
-  if(entry.harvestEndDate || entry.closed) return MAP_PAL.clear;
+  // v110e: a block known only from the FTEN permit layer has no RESULTS
+  // harvest date or closed flag, so its own disturbance end date and a
+  // RETIRED permit also count as finished (was drawn red, e.g. a block cut
+  // 2005 to 2007 with a retired permit).
+  if(entry.harvestEndDate || entry.disturbanceEnd || entry.closed || String(entry.lifeCycleStatus || '').toUpperCase() === 'RETIRED') return MAP_PAL.clear;
   if(entry.disturbanceStart) return MAP_PAL.restricted;
   return MAP_PAL.cutPlanned;
 }

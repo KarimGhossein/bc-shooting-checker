@@ -53,6 +53,7 @@ Delivered via SendUserFile as a standalone HTML file (works fully offline-of-Cla
 - Tests: 34/34, new `tests/verify_v110_clearall_spots_pinreports.js`.
 - **v110c**: the active-cutblock outline and its smooth 400 m red buffer are drawn by Shooting Spots again (removing them with the rest of the non-spot shapes lost a safety cue). Their map key rows are back. Restricted areas and roads stay off.
 - **v110d**: "Active logging" now means the cutting permit is ACTIVE and the harvest has no recorded end date or ended within the last year (`ACTIVE_LOGGING_RECENT_DAYS`). Open permits on long-finished blocks (for example opening 1765734, cut 2022 and replanted 2024-2025) no longer get the red outline, 400 m zone, red report flag or spot advisory. Report rows and the cutblock popup now say the block's state in plain words ("Harvested 2022, replanted 2025, permit still open").
+- **v110e**: cutblock colour fix. Blocks known only from the FTEN permit layer (no RESULTS opening) were drawn red even when long finished, because only RESULTS supplied a harvest date or closed flag. Their own disturbance end date and a RETIRED permit now count as finished (green).
 
 ## v109: End-user polish pass, Settings, Layer Functions, management units
 
