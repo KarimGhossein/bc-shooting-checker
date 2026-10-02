@@ -51,6 +51,7 @@ Delivered via SendUserFile as a standalone HTML file (works fully offline-of-Cla
 - **Markup pins carry a full report**: dropping or moving a pin runs the same lookup for the pin's spot in the background (without moving the main pin or redrawing the map) and saves the finished report on the pin. The pin popup shows the verdict and a View report button that opens the saved report in the report panel, with the checklist and a Check again button. Reports are kept in this browser and included in Export/Import. Code: `fetchLocationData()` split out of `runLookup()`, `renderReport(data, {snapshot:true})` returns the report instead of drawing it.
 - **Starts on BC**: the map opens fitted to BC (`BC_BOUNDS`) instead of a fixed zoom that showed most of North America. A locate button sits under the zoom controls, and every time the map opens it asks for your location: if you allow it and you're in BC it zooms to your area, otherwise it stays on the whole-BC view. Once someone blocks location for the site the browser stops asking, so it doesn't nag. It never runs a lookup by itself.
 - Tests: 34/34, new `tests/verify_v110_clearall_spots_pinreports.js`.
+- **v110c**: the active-cutblock outline and its smooth 400 m red buffer are drawn by Shooting Spots again (removing them with the rest of the non-spot shapes lost a safety cue). Their map key rows are back. Restricted areas and roads stay off.
 
 ## v109: End-user polish pass, Settings, Layer Functions, management units
 

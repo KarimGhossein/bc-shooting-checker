@@ -45,7 +45,7 @@ const ROOT = path.resolve(__dirname, '..');
     // ---- spots only ----
     const src = runPotentialSpotsSearch.toString();
     out.spotsNoRestrictedDraw = !/restrictedStyle\(\)/.test(src);
-    out.spotsNoRoadsOrCutblockDraw = !/renderNearbyRoads\(|renderActiveCutblockBuffers\(|renderActiveCutblockOutlines\(/.test(src);
+    out.spotsNoRoadsOrCutblockDraw = !/renderNearbyRoads\(/.test(src) && /renderActiveCutblockBuffers\(activeCuts/.test(src); // v110c: cutblock buffer drawn again, roads still not
     out.spotsActiveLoggingAdvisory = /ACTIVE_LOGGING_ADVISORY/.test(src);
 
     // ---- pin reports ----

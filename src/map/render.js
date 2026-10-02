@@ -978,11 +978,14 @@ async function runPotentialSpotsSearch(area){
   // v47, buffers drawn first (bottom of the stack) so the outlines and the
   // spots themselves render on top of the shaded zone and stay clickable.
   // v110: Shooting Spots draws only where shooting may be possible (teal
-  // spots and purple presumed-Crown gaps). Restricted areas, roads and the
-  // active-cutblock outline/buffer are no longer drawn; active logging
+  // spots and purple presumed-Crown gaps). Restricted areas and roads are no
+  // longer drawn. v110c: the active-cutblock outline and its 400 m buffer
+  // are drawn again (a safety cue, not clutter), underneath the spots; active logging
   // nearby becomes an advisory in the spot's own popup instead (bbox
   // test against each active cutblock grown by CUTBLOCK_WARN_DISTANCE_M,
   // so "nearby" is approximate). Reveal Road still draws roads on demand.
+  renderActiveCutblockBuffers(activeCuts, spotLayer);
+  renderActiveCutblockOutlines(activeCuts, spotLayer);
   const activeCutBboxes = activeCuts.filter(c => c.geometry).map(c => expandBboxByMeters(bboxOfGeom(c.geometry), CUTBLOCK_WARN_DISTANCE_M));
   const ACTIVE_LOGGING_ADVISORY = `Active logging within about ${CUTBLOCK_WARN_DISTANCE_M} m, watch for trucks and crews.`;
   let shown = 0, restrictedShown = 0, mixedCount = 0;

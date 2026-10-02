@@ -86,7 +86,7 @@ const ROOT = path.resolve(__dirname, '..');
 
   const pass = live.order.style !== -1 && live.order.style < live.order.render && live.order.render < live.order.main
     && live.globals === 'object,object,string,object' && live.hitFill > 0
-    && live.legendCount === 26 // v110: spots-only rows (restricted, active cutblock outline/buffer) removed && live.legendNotInPalette.length === 0
+    && live.legendCount === 28 // v110: restricted row removed; v110c: active cutblock rows back && live.legendNotInPalette.length === 0
     && live.pinIcon && live.chooserBronze && live.mapBase === 'satellite'
     && live.casingCss && live.casingFilters && live.casingThreshold > Math.max(...Object.values(MAP_FILL_FOR_TEST)) && live.casingThreshold > 1 - Math.pow(1 - 0.24, 3) && live.zoomAnimOff && live.popupThemed && live.pinCss && live.controlsThemed
     && live.spotSolid && live.restrictedFill < 0.4 && live.gapDash

@@ -1130,6 +1130,8 @@
         <div class="lg-row" data-k="gap"><span class="sw" style="background:#8E7DE3"></span> Gap spot (presumed Crown)</div>
         <div class="lg-row" data-k="publicRoad"><span class="sw line" style="border-color:#9DA9B3;border-style:solid"></span> Public road</div>
         <div class="lg-row" data-k="highway"><span class="sw line" style="border-color:#D9733A;border-style:solid"></span> Listed major highway</div>
+        <div class="lg-row" data-k="activeCutOutline"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Active cutblock</div>
+        <div class="lg-row" data-k="activeCutBuffer"><span class="sw" style="background:rgba(226,104,90,.2);border:1.5px solid #E2685A"></span> Active cutblock buffer</div>
         <div class="lg-row" data-k="mvClosure"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Motor vehicle closure</div>
         <div class="lg-row" data-k="mvOpen"><span class="sw line" style="border-color:#45A872;border-style:dashed"></span> Motor vehicle route (open)</div>
       </div>
@@ -1569,7 +1571,7 @@ document.getElementById('checklistInfoBtn').addEventListener('click', () => open
 // use), so the old Crown-Land-specific name no longer described it.
 // v109: one "i" beside the Layer Functions label covers all four tools.
 const TOOLS_HELP_HTML = `<h4 style="margin-top:0">View Parcels</h4><div class="mrow">Draws every parcel in the current view, coloured by ownership (see the map key). It only covers what's on screen, so press it again after you move the map.</div>
-<h4>Shooting Spots</h4><div class="mrow">Finds Crown land in the current view that passes every automatic check: outside parks and municipalities, and clear of private land and road buffers. The same search runs on its own within 2&nbsp;km of every location you pick.</div><div class="mrow">Only places where shooting may be possible are drawn: teal is a potential spot, purple is land with no parcel record, presumed Crown. Click one for advisories such as nearby active logging. Wide views need zooming in first.</div>
+<h4>Shooting Spots</h4><div class="mrow">Finds Crown land in the current view that passes every automatic check: outside parks and municipalities, and clear of private land and road buffers. The same search runs on its own within 2&nbsp;km of every location you pick.</div><div class="mrow">Only places where shooting may be possible are drawn: teal is a potential spot, purple is land with no parcel record, presumed Crown. Active logging is outlined in red with a shaded 400 m buffer. Click a spot for its advisories. Wide views need zooming in first.</div>
 <h4>Reveal Road</h4><div class="mrow">Draws public roads and forest service roads in the current view. Hover a road for its class, status and buffer distance.</div>
 <h4>Clear</h4><div class="mrow">Removes one layer or report section from the map and leaves everything else, or use Clear all layers to remove everything the app drew. Your pin, report and own markup are never cleared by Clear all.</div>`;
 
