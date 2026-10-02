@@ -48,6 +48,19 @@ const ROOT = path.resolve(__dirname, '..');
     out.spotsNoRoadsOrCutblockDraw = !/renderNearbyRoads\(/.test(src) && /renderActiveCutblockBuffers\(activeCuts/.test(src); // v110c: cutblock buffer drawn again, roads still not
     out.spotsActiveLoggingAdvisory = /ACTIVE_LOGGING_ADVISORY/.test(src);
 
+    // ---- v110d: open permit on a long-finished block is not "active logging" ----
+    const now = new Date('2026-10-02T12:00:00');
+    out.loggingRule = isLoggingLikelyNow('ACTIVE', null, now) === true
+      && isLoggingLikelyNow('ACTIVE', '2026-06-01', now) === true
+      && isLoggingLikelyNow('ACTIVE', '2022-07-04', now) === false
+      && isLoggingLikelyNow('RETIRED', null, now) === false;
+    const real = buildCutblockList(
+      { ok: true, features: [{ properties: { OPENING_ID: 1765734, OPENING_STATUS_CODE: 'APP', DISTURBANCE_START_DATE: '2022-05-25Z', DISTURBANCE_END_DATE: '2022-07-04Z', PLANTING_1_COMPLETION_DATE: '2025-05-17Z', PLANTING_2_COMPLETION_DATE: '2024-06-29Z' }, geometry: null }] },
+      { ok: true, features: [{ properties: { OPENING_ID: 1765734, LIFE_CYCLE_STATUS_CODE: 'ACTIVE', CUT_BLOCK_ID: 'CBK0025' }, geometry: null }] },
+      { '1765734': { HARVEST_END_DATE: '2022-07-04Z' } })[0];
+    out.realBlockText = cutblockStateText(real);
+    out.realBlockLabelled = out.realBlockText === 'Harvested 2022, replanted 2025, permit still open';
+
     // ---- pin reports ----
     const okEmpty = { ok: true, features: [] };
     const fake = { lat: 49.5, lng: -121.5, parcelR: okEmpty, muniR: okEmpty, parkR: okEmpty, cutR: okEmpty, cutPlanR: okEmpty, cutList: [],
@@ -73,7 +86,7 @@ const ROOT = path.resolve(__dirname, '..');
     return out;
   });
 
-  const pass = Object.entries(r).every(([k, v]) => k === 'clearAllNote' || v === true) && errors.length === 0;
+  const pass = Object.entries(r).every(([k, v]) => k === 'clearAllNote' || k === 'realBlockText' || v === true) && errors.length === 0;
   console.log('=== errors ===', errors.length ? errors.join('\n') : '(none)');
   console.log('=== RESULTS ===', JSON.stringify(r, null, 2));
   console.log(pass ? 'PASS' : 'FAIL');

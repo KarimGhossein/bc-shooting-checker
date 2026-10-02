@@ -85,3 +85,10 @@ const SYNOPSIS_REGION_PDFS = {
 // far the map zooms in on the person's own location.
 const BC_BOUNDS = [[48.2, -139.1], [60.0, -114.0]];
 const LOCATE_ZOOM = 11;
+
+// v110d: an ACTIVE cutting permit alone doesn't mean logging is happening:
+// licensees often leave a permit open for years after the block is cut and
+// replanted. The 400 m "active logging" zone is only drawn when the permit
+// is ACTIVE and harvest either has no recorded end date or ended within
+// this many days.
+const ACTIVE_LOGGING_RECENT_DAYS = 365;

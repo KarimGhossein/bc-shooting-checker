@@ -99,6 +99,32 @@ function renderForestServiceRoads(features, targetLayer){
 // Green = closed out; red = disturbed but not closed out (active); blue-grey
 // = planned only, authorized but nothing on the ground yet, the case that
 // used to be invisible because it only exists in FTEN, not RESULTS.
+// v110d: see ACTIVE_LOGGING_RECENT_DAYS. lifeCycle is the FTEN permit code,
+// harvestEnd the latest recorded harvest/disturbance end date (any source).
+function isLoggingLikelyNow(lifeCycle, harvestEnd, now){
+  if(String(lifeCycle || '').toUpperCase() !== 'ACTIVE') return false;
+  if(!harvestEnd) return true;
+  const end = new Date(String(harvestEnd).substring(0, 10) + 'T12:00:00');
+  if(isNaN(end)) return true;
+  return ((now || new Date()) - end) <= ACTIVE_LOGGING_RECENT_DAYS * 86400000;
+}
+// Plain-language state for a cutblock entry (buildCutblockList()), e.g.
+// "Harvested 2022, replanted 2025, permit still open".
+function cutblockStateText(entry){
+  const end = entry.harvestEndDate || entry.disturbanceEnd;
+  const yr = d => String(d).substring(0, 4);
+  const active = String(entry.lifeCycleStatus || '').toUpperCase() === 'ACTIVE';
+  if(end){
+    let t = `Harvested ${yr(end)}`;
+    if(entry.plantedDate) t += `, replanted ${yr(entry.plantedDate)}`;
+    if(active) t += isLoggingLikelyNow(entry.lifeCycleStatus, end) ? ', permit still active' : ', permit still open';
+    return t;
+  }
+  if(entry.disturbanceStart) return `Logging started ${yr(entry.disturbanceStart)}, not yet recorded as finished`;
+  if(active) return 'Approved, logging may be under way';
+  if(entry.plannedHarvestDate && !String(entry.plannedHarvestDate).startsWith('2200')) return `Planned ${yr(entry.plannedHarvestDate)}`;
+  return 'Not started';
+}
 function cutblockColor(entry){
   if(entry.harvestEndDate || entry.closed) return MAP_PAL.clear;
   if(entry.disturbanceStart) return MAP_PAL.restricted;
@@ -503,7 +529,7 @@ function activeCutblockPopup(props){
   return `<div style="font-size:12.5px;line-height:1.6;min-width:170px">
     <b>Active cutblock (FTEN)</b><br>
     Block: ${esc(cutblockFeatureLabel(props))}<br>
-    Life Cycle: <b>ACTIVE</b>, approved; activities may be taking place<br>
+    Permit active, harvest not recorded as finished${props.DISTURBANCE_START_DATE ? ` (started ${esc(String(props.DISTURBANCE_START_DATE).substring(0, 10))})` : ''}<br>
     <span style="color:var(--muted);font-size:11px">Its ${CUTBLOCK_WARN_DISTANCE_M}m buffer zone is shaded on the map too, any spot inside it should be treated as "close to active logging."</span>
   </div>`;
 }
@@ -934,8 +960,17 @@ async function runPotentialSpotsSearch(area){
   // drawn or checked against it, same as it's already excluded from the
   // click report's map fill. Filtered out before anything downstream (the
   // outline layer, the buffer-zone layer) ever sees it.
+  // v110d: ACTIVE permit plus no recent finished harvest. The harvest end
+  // date comes from the permit record itself or, failing that, from the
+  // matching RESULTS opening (cutRes) by OPENING_ID.
+  const resultsEndByOpening = {};
+  if(cutRes && cutRes.ok) cutRes.features.forEach(f => { const p = f.properties || {}; if(p.OPENING_ID != null && p.DISTURBANCE_END_DATE) resultsEndByOpening[String(p.OPENING_ID)] = p.DISTURBANCE_END_DATE; });
   const activeCutsAll = (cutPlanRes && cutPlanRes.ok)
-    ? cutPlanRes.features.filter(f => String(f.properties && f.properties.LIFE_CYCLE_STATUS_CODE).toUpperCase() === "ACTIVE")
+    ? cutPlanRes.features.filter(f => {
+        const p = f.properties || {};
+        const end = p.DISTURBANCE_END_DATE || (p.OPENING_ID != null ? resultsEndByOpening[String(p.OPENING_ID)] : null);
+        return isLoggingLikelyNow(p.LIFE_CYCLE_STATUS_CODE, end);
+      })
     : [];
   let oversizedActiveCutCount = 0;
   const activeCuts = activeCutsAll.filter(f => {

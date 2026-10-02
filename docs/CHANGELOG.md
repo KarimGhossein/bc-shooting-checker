@@ -52,6 +52,7 @@ Delivered via SendUserFile as a standalone HTML file (works fully offline-of-Cla
 - **Starts on BC**: the map opens fitted to BC (`BC_BOUNDS`) instead of a fixed zoom that showed most of North America. A locate button sits under the zoom controls, and every time the map opens it asks for your location: if you allow it and you're in BC it zooms to your area, otherwise it stays on the whole-BC view. Once someone blocks location for the site the browser stops asking, so it doesn't nag. It never runs a lookup by itself.
 - Tests: 34/34, new `tests/verify_v110_clearall_spots_pinreports.js`.
 - **v110c**: the active-cutblock outline and its smooth 400 m red buffer are drawn by Shooting Spots again (removing them with the rest of the non-spot shapes lost a safety cue). Their map key rows are back. Restricted areas and roads stay off.
+- **v110d**: "Active logging" now means the cutting permit is ACTIVE and the harvest has no recorded end date or ended within the last year (`ACTIVE_LOGGING_RECENT_DAYS`). Open permits on long-finished blocks (for example opening 1765734, cut 2022 and replanted 2024-2025) no longer get the red outline, 400 m zone, red report flag or spot advisory. Report rows and the cutblock popup now say the block's state in plain words ("Harvested 2022, replanted 2025, permit still open").
 
 ## v109: End-user polish pass, Settings, Layer Functions, management units
 

@@ -3298,7 +3298,7 @@ const LEGEND_MEANINGS = {
   restricted: "Excluded by a park, municipality, road or private land buffer. Click it for the reason.",
   publicRoad: "Public road. Shooting on or across the road allowance is prohibited.",
   highway: "Major highway with a wider no-shooting corridor.",
-  activeCutOutline: "Area with an active cutting permit. Logging may be under way.",
+  activeCutOutline: "Logging likely under way: the permit is active and the harvest is unfinished or finished within the last year.",
   activeCutBuffer: "400 m around active logging. Watch for trucks and crews.",
   mvClosure: "Motor vehicles restricted by regulation on this route or area.",
   mvOpen: "Route open to motor vehicles under the regulation."
@@ -3394,6 +3394,7 @@ function buildCutblockList(cutR, cutPlanR, harvestByOpeningId){
         // fills it in.
         lifeCycleStatus: null,
         closed: isClosedOpening(p.OPENING_STATUS_CODE),
+        plantedDate: [p.PLANTING_1_COMPLETION_DATE, p.PLANTING_2_COMPLETION_DATE].filter(Boolean).sort().pop() || null, // v110d
         geometry: f.geometry,
         source: "results"
       });
@@ -3607,6 +3608,8 @@ function showCutblockSourceInfo(){
 function cutblockPopup(entry){
   const idLabel = entry.openingId != null ? `Opening ${esc(entry.openingId)}` : (entry.cutBlockId ? `Cut block ${esc(entry.cutBlockId)}` : "Cutblock");
   const rows = [];
+  rows.push(`<b>${esc(cutblockStateText(entry))}</b>`); // v110d
+  if(entry.plantedDate) rows.push(`Replanted: <b>${fmtDate(entry.plantedDate)}</b>`);
   const phaseMeaning = statusCodeLabel(entry.statusLabel);
   rows.push(`Logging phase: <b>${esc(entry.statusLabel || "?")}</b>${phaseMeaning ? ` <span style="color:var(--muted)">(${esc(phaseMeaning)})</span>` : ''}`);
   if(entry.lifeCycleStatus){
@@ -5300,7 +5303,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
       // explicit call.
       const inBufferEntries = cutList.filter(e =>
         e.geometry && !e.oversized &&
-        String(e.lifeCycleStatus || "").toUpperCase() === "ACTIVE" &&
+        isLoggingLikelyNow(e.lifeCycleStatus, e.harvestEndDate || e.disturbanceEnd) && // v110d: open permit on a long-finished block doesn't count
         pointToGeomMeters([lng, lat], e.geometry) <= CUTBLOCK_WARN_DISTANCE_M
       );
       pill = oversizedCount > 0
@@ -5331,7 +5334,7 @@ function renderReport({lat,lng,parcelR,muniR,parkR,cutR,cutPlanR,cutList,tenureR
         const lifeCycleBit = entry.lifeCycleStatus
           ? (lifeCycleMeaning ? `<b title="${esc(lifeCycleMeaning)}" style="cursor:help;border-bottom:1px dotted #9aa1ab">${esc(entry.lifeCycleStatus)}</b>` : `<b>${esc(entry.lifeCycleStatus)}</b>`)
           : `<b title="Not available, this record comes from RESULTS (RSLT_OPENING_SVW), which has no Life Cycle field. See other details for the logging-phase status instead." style="cursor:help;border-bottom:1px dotted #9aa1ab">n/a</b>`;
-        return `<div class="field clickable" data-cutblock-idx="${i}" onclick="showCutblockDetail(${i})"><span class="chev">details ›</span>${idLabel}, life cycle ${lifeCycleBit}, ${dateBit}${flagBit}${bufferBit}</div>`;
+        return `<div class="field clickable" data-cutblock-idx="${i}" onclick="showCutblockDetail(${i})"><span class="chev">details ›</span>${idLabel}: ${esc(cutblockStateText(entry))}${flagBit}${bufferBit}</div>`; // v110d: plain state instead of life cycle code + date
       }).join('');
       addReason('amber', `${cutList.length} forestry opening(s)/block(s) recorded within 2 km, this data can be out of date, so treat it as a prompt to look for active harvesting/hauling on site, not a live status.`);
       if(oversizedCount > 0) addReason('amber', `${oversizedCount} of those cutblock record(s) have an implausibly large area for a single block and were left off the map so they don't obscure everything else nearby, likely a mislabeled licence/operating-area boundary in BC's data rather than an app bug. Still listed below.`);
