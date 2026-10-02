@@ -57,7 +57,7 @@
 // without touching the other nine. Rebuilt fresh and empty at the top of
 // every renderMapOverlays() call, each new click starts every category
 // over from nothing, same as before.
-const OVERLAY_CATEGORY_KEYS = ['parcel','municipality','park','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road'];
+const OVERLAY_CATEGORY_KEYS = ['parcel','municipality','park','reserve','wma','mu','recreation','mvpr','cutblocks','tenures','woodlot','road'];
 let overlayCategoryLayers = {};
 
 // v85: pulled out of renderMapOverlays()'s own inline forEach so Reveal Road
@@ -125,6 +125,20 @@ function cutblockStateText(entry){
   if(entry.plannedHarvestDate && !String(entry.plannedHarvestDate).startsWith('2200')) return `Planned ${yr(entry.plannedHarvestDate)}`;
   return 'Not started';
 }
+// v111: shared by the report overlay and View Parcels.
+function reserveStyle(){ return {color: MAP_PAL.reserve, weight: MAP_W.line, dashArray: MAP_DASH, fillColor: MAP_PAL.reserve, fillOpacity: MAP_FILL.strong}; }
+function reserveName(p){ return (p && (p.ENGLISH_NAME || p.CLAB_ID)) || 'Indian Reserve'; }
+function reservePopup(p){
+  return `<div style="font-size:12.5px;line-height:1.6;min-width:190px"><b>${esc(reserveName(p))}</b><br>Indian Reserve${p && p.BAND_NAME ? `, ${esc(p.BAND_NAME)}` : ''}<br><span style="color:var(--muted)">Restricted. Do not shoot or hunt here without permission from the First Nation.</span></div>`;
+}
+function drawReserveFeatures(features, targetLayer){
+  features.forEach(f => {
+    L.geoJSON(f, {style: reserveStyle(), bubblingMouseEvents:false})
+      .on('click', e => openNearbyFeaturesPopupAt(e.latlng))
+      .addTo(targetLayer);
+    pushClickable(f.geometry, '', `Indian Reserve: ${esc(reserveName(f.properties))}`, 'Indian Reserve', reservePopup(f.properties || {}));
+  });
+}
 function cutblockColor(entry){
   // v110e: a block known only from the FTEN permit layer has no RESULTS
   // harvest date or closed flag, so its own disturbance end date and a
@@ -145,7 +159,7 @@ function cutblockHighlightStyle(color){ return {color, weight:3, fillColor:color
 // actually returned something, registering each drawn feature with the
 // shared chooser (pushClickable()) so overlapping/adjacent features surface
 // a "N records here" choice instead of silently hiding all but the topmost.
-function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, roadR, nearbyParcelR, recList, mvprList, wmaR, muR}){
+function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, roadR, nearbyParcelR, recList, mvprList, wmaR, muR, reserveR}){
   let fitLayer = null;
   // v79: rebuilt fresh for this lookup, see currentClickableFeatures' own
   // declaration in src/map/chooser.js for why this exists and how it's used
@@ -331,6 +345,14 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     pushClickable(f.geometry, '', `Municipal boundary: ${esc(f.properties.ADMIN_AREA_NAME || "n/a")}`, 'Municipal boundary', muniPopup(f.properties));
   }
 
+  // v111: Indian Reserves, drawn as restricted land (red fill, dashed edge)
+  // above the parcel layer, so a reserve parcel ParcelMap only calls
+  // "Federal" still reads as off-limits.
+  if(reserveR && reserveR.ok && reserveR.features.length){
+    currentPushSource = 'overlay:reserve';
+    drawReserveFeatures(reserveR.features, overlayCategoryLayers.reserve);
+  }
+
   if(parkR.ok && parkR.features.length){
     currentPushSource = 'overlay:park';
     // v81: rejoins the shared chooser too, for the same consistency reason
@@ -427,7 +449,9 @@ function renderMapOverlays({parcelR, muniR, parkR, cutList, tenureR, woodlotR, r
     // read as solidly opaque as a park.
     mvprList.forEach(entry => {
       if(!entry.geometry) return;
-      const color = entry.closed ? MAP_PAL.restricted : MAP_PAL.clear;
+      // v111: amber, not red. These closures restrict motor vehicles (often a
+      // single kind, such as snowmobiles, for part of the year), not shooting.
+      const color = entry.closed ? MAP_PAL.caution : MAP_PAL.clear;
       const nameLabel = esc(entry.geographicName || "Motor Vehicle Prohibition");
       const rowLabel = `${entry.kind === "route" ? "Motor vehicle route restriction" : "Motor vehicle closed area"}: ${nameLabel}`;
       if(entry.kind === "route"){
@@ -898,7 +922,7 @@ async function runPotentialSpotsSearch(area){
   // real result or error to show (see the two setNote-style updates further
   // down).
   const progressUi = startSpotsProgress();
-  const SPOTS_QUERY_LABELS = ['parcels', 'parks', 'municipalities', 'Crown tenures', 'woodlots', 'cutblocks', 'active cutting permits', 'parcel boundaries', 'roads'];
+  const SPOTS_QUERY_LABELS = ['parcels', 'parks', 'municipalities', 'Crown tenures', 'woodlots', 'cutblocks', 'active cutting permits', 'parcel boundaries', 'roads', 'reserves'];
   const allQueries = trackSpotsProgress([
     queryLayer(LAYERS.parcel.typeName, cqlFor(LAYERS.parcel.geom, CROWN_OWNER_CQL), 20000, SPOT_MAX_FEATURES),
     queryLayer(LAYERS.park.typeName, cqlFor(LAYERS.park.geom), 18000, 300),
@@ -925,7 +949,9 @@ async function runPotentialSpotsSearch(area){
     // it, always true for the radius sweep, a real gate for the view-based
     // button (a wide viewport press shouldn't fetch every road in a huge area
     // just to leave the buffer check unrun anyway).
-    infraZoomOk ? queryLayer(LAYERS.draRoad.typeName, cqlFor(LAYERS.draRoad.geom), 20000, 1500) : Promise.resolve({ok:false, error:"zoomed out", features:[]})
+    infraZoomOk ? queryLayer(LAYERS.draRoad.typeName, cqlFor(LAYERS.draRoad.geom), 20000, 1500) : Promise.resolve({ok:false, error:"zoomed out", features:[]}),
+    // v111: Indian Reserves, excluded exactly like parks below
+    queryLayer(LAYERS.reserve.typeName, cqlFor(LAYERS.reserve.geom), 18000, 300)
     // v109: the OpenStreetMap buildings query (Overpass) is gone. OSM misses
     // many rural cabins and farm buildings, so it gave a false sense of
     // coverage; the report now states the 100 m occupied-building rule
@@ -935,19 +961,21 @@ async function runPotentialSpotsSearch(area){
   endSpotsProgress(progressUi);
   if(seq !== spotSeq) return; // a newer search superseded this one
 
-  const [parcelRes, parkRes, muniRes, tenureRes, woodlotRes, cutRes, cutPlanRes, allParcelsRes, roadRes] = results;
+  const [parcelRes, parkRes, muniRes, tenureRes, woodlotRes, cutRes, cutPlanRes, allParcelsRes, roadRes, reserveRes] = results;
 
   if(!parcelRes.ok){
     if(noteEl) noteEl.textContent = `Couldn't load parcel data from BC's servers. Try again in a few seconds.`;
     return;
   }
 
-  const parks = parkRes.ok ? parkRes.features : [];
+  // v111: reserves are no-go land, so they join the park list (same exclusion
+  // for candidate parcels and presumed-Crown gap cells).
+  const parks = (parkRes.ok ? parkRes.features : []).concat(reserveRes && reserveRes.ok ? reserveRes.features : []);
   const munis = muniRes.ok ? muniRes.features : [];
   const tenures = tenureRes.ok ? tenureRes.features : [];
   const woodlots = woodlotRes.ok ? woodlotRes.features : [];
   const cuts = cutRes.ok ? cutRes.features : [];
-  const partialWarning = [parkRes, muniRes, tenureRes, woodlotRes, cutRes].some(r => !r.ok);
+  const partialWarning = [parkRes, muniRes, tenureRes, woodlotRes, cutRes, reserveRes].some(r => !r || !r.ok);
 
   // v45: FTEN cutting-permit records with LIFE_CYCLE_STATUS_CODE === ACTIVE
   // ("approved; activities may be taking place"), the set the buffer

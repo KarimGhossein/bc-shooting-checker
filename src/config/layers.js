@@ -72,5 +72,12 @@ const LAYERS = {
   // (WILDLIFE_MGMT_UNIT_ID e.g. "3-17", REGION_RESPONSIBLE_NAME,
   // GAME_MANAGEMENT_ZONE_ID/NAME; geometry column GEOMETRY). The unit sets
   // which part of the Hunting and Trapping Synopsis applies.
-  mu: {typeName:"WHSE_WILDLIFE_MANAGEMENT.WAA_WILDLIFE_MGMT_UNITS_SVW", geom:"GEOMETRY", mode:"intersects"}
+  mu: {typeName:"WHSE_WILDLIFE_MANAGEMENT.WAA_WILDLIFE_MGMT_UNITS_SVW", geom:"GEOMETRY", mode:"intersects"},
+  // v111: Indian Reserves (Canada Lands, published by BC as Indian Reserves
+  // and Band Names). Fields confirmed via DescribeFeatureType: ENGLISH_NAME,
+  // BAND_NAME, BAND_NUMBER, CLAB_ID; geometry GEOMETRY. ParcelMap BC often
+  // labels reserve parcels just "Federal", so this layer is what tells a
+  // reserve apart from other federal land. Dwithin so nearby reserves are
+  // drawn for context; the verdict uses only the one containing the point.
+  reserve: {typeName:"WHSE_ADMIN_BOUNDARIES.ADM_INDIAN_RESERVES_BANDS_SP", geom:"GEOMETRY", mode:"dwithin", radius:SEARCH_RADIUS_M}
 };

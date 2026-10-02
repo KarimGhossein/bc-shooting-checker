@@ -35,7 +35,8 @@ const MAP_PAL = {
   municipal:   "#B874B8",
   tenure:      "#4FA0CC",
   woodlot:     "#9BA84F",
-  mu:          "#E4DDCB", // v109: management unit boundary, a pale warm line; large and always present, so it stays quiet
+  mu:          "#E4DDCB",
+  reserve:     "#E2685A", // v111: Indian Reserve, same red as other no-go land (restricted), drawn with the admin dash // v109: management unit boundary, a pale warm line; large and always present, so it stays quiet
   wma:         "#C4A52A", // gold, not orange: orange belongs to the highway line (they were near-identical, 24 vs 20 degrees hue); deep enough to read on the light street map
   fsrActive:   "#D8A755",
   fsrRetired:  "#A3957A", // greyed tan: same family as active FSR (reads as "faded"), and kept apart from the grey public-road line

@@ -153,7 +153,7 @@ const ROOT = path.resolve(__dirname, '..');
   })();
 
   const pass = results.threeNewItemsFirst
-    && results.totalItemCount === 15 // v109: + Management Unit
+    && results.totalItemCount === 16 // v109: + Management Unit
     && results.mapToolLayersType === 'object'
     && results.clearMapToolLayerType === 'function'
     && results.mapToolLayerKeysMatch === true

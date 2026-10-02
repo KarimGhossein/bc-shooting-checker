@@ -76,7 +76,7 @@ const ROOT = path.resolve(__dirname, '..');
     && results.nearbyParcelMax === 'number'
     && results.startDateCql === 'string'
     && results.layersType === 'object'
-    && results.layerKeys.length === 17 // v109: + mu
+    && results.layerKeys.length === 18 // v109: + mu
     && results.constantsIdx !== -1 && results.layersIdx !== -1
     && results.constantsIdx < results.layersIdx
     && results.mainInlineIdx !== -1
