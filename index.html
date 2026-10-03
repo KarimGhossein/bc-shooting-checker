@@ -1133,6 +1133,9 @@
         <div class="lg-row" data-k="gap"><span class="sw" style="background:#8E7DE3"></span> Gap spot (presumed Crown)</div>
         <div class="lg-row" data-k="publicRoad"><span class="sw line" style="border-color:#9DA9B3;border-style:solid"></span> Public road</div>
         <div class="lg-row" data-k="highway"><span class="sw line" style="border-color:#D9733A;border-style:solid"></span> Listed major highway</div>
+        <div class="lg-row" data-k="privateBuffer"><span class="sw" style="background:rgba(226,104,90,.12);border:1.5px solid #E2685A"></span> Private land buffer</div>
+        <div class="lg-row" data-k="roadBuffer"><span class="sw" style="background:#9DA9B3;opacity:.6"></span> Road buffer</div>
+        <div class="lg-row" data-k="highwayBuffer"><span class="sw" style="background:rgba(217,115,58,.15);border:1px solid #D9733A"></span> Highway buffer</div>
         <div class="lg-row" data-k="activeCutOutline"><span class="sw line" style="border-color:#E2685A;border-style:solid"></span> Active cutblock</div>
         <div class="lg-row" data-k="activeCutBuffer"><span class="sw" style="background:rgba(226,104,90,.2);border:1.5px solid #E2685A"></span> Active cutblock buffer</div>
         <div class="lg-row" data-k="mvClosure"><span class="sw line" style="border-color:#D9A441;border-style:solid"></span> Motor vehicle closure</div>
@@ -1359,6 +1362,7 @@
 <script src="src/map/chooser.js"></script>
 <script src="src/map/render.js"></script>
 <script src="src/map/closedareas.js"></script>
+<script src="src/map/spotclip.js"></script>
 <script>
 // ---------------- info modal ----------------
 // A single reusable popup used everywhere something used to be permanent
@@ -3315,6 +3319,9 @@ const LEGEND_MEANINGS = {
   restricted: "Excluded by a park, municipality, road or private land buffer. Click it for the reason.",
   publicRoad: "Public road. Shooting on or across the road allowance is prohibited.",
   highway: "Major highway with a wider no-shooting corridor.",
+  get privateBuffer(){ return `${BUILDING_BUFFER_M} m from private land. KAGE's margin; the legal minimum is 100 m from an occupied building.`; },
+  get roadBuffer(){ return `${DEFAULT_ROAD_BUFFER_M} m either side of a public road. Spots are trimmed back from it.`; },
+  get highwayBuffer(){ return `${SPECIAL_ROUTE_BUFFER_M} m either side of a listed major highway (400 m in law).`; },
   activeCutOutline: "Logging likely under way: the permit is active and the harvest is unfinished or finished within the last year.",
   activeCutBuffer: "400 m around active logging. Watch for trucks and crews.",
   mvClosure: "Motor vehicles (sometimes one type, like snowmobiles) restricted on this route or area, often seasonally. Doesn't restrict shooting on foot.",
@@ -4575,6 +4582,10 @@ function gapStyle(){
   // drawn once by gapOutlineStyle() (render.js drawGridRegionOutline), which
   // keeps the shared dash for "presumed, not confirmed".
   return {color: GAP_COLOR, weight: 0.6, opacity: 0.22, fillColor: GAP_COLOR, fillOpacity: 0.16};
+}
+// v113: the merged purple area (exact clipping) carries its own dashed edge
+function gapRegionStyle(){
+  return {color: GAP_COLOR, weight: MAP_W.line, opacity: 0.9, dashArray: MAP_DASH, fillColor: GAP_COLOR, fillOpacity: gapStyle().fillOpacity, lineJoin: 'round'};
 }
 function gapOutlineStyle(){
   return {color: GAP_COLOR, weight: MAP_W.line, opacity: 0.9, dashArray: MAP_DASH, fill: false};

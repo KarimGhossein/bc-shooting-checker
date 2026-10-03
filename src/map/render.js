@@ -880,6 +880,33 @@ function cancelSpotsSearch(){
 // revealPotentialSpots() (the button, an INTERSECTS query against the
 // current viewport) both call this one core, parameterized by `area` --
 // {bounds, cqlFor, areaLabel, infraZoomOk, circleClip, fitAfter}.
+// v113: the private-land and road buffers that trim the spots are drawn, so
+// nothing is cut away silently. Clicking one says what it is and why.
+function spotBufferPopup(kind){
+  const t = {
+    private: [`${BUILDING_BUFFER_M} m from private land`, `KAGE keeps spots at least ${BUILDING_BUFFER_M} m from private land. The law's minimum is 100 m from an occupied building, so this margin is wider on purpose.`],
+    road: [`${DEFAULT_ROAD_BUFFER_M} m road buffer`, `No shooting on or across a road allowance. KAGE keeps spots ${DEFAULT_ROAD_BUFFER_M} m back from public roads.`],
+    highway: [`${SPECIAL_ROUTE_BUFFER_M} m highway buffer`, `Listed major highway with a wider no-shooting corridor (400 m in law). KAGE keeps spots ${SPECIAL_ROUTE_BUFFER_M} m back.`]
+  }[kind];
+  return {label: t[0], html: `<div style="font-size:12.5px;line-height:1.6;min-width:200px;max-width:280px"><b>${esc(t[0])}</b><br><span style="color:var(--muted)">${esc(t[1])}</span></div>`};
+}
+function spotBufferStyle(kind){
+  if(kind === 'private') return {color: MAP_PAL.restricted, weight: MAP_W.line, opacity: 0.9, fillColor: MAP_PAL.restricted, fillOpacity: MAP_FILL.area, lineJoin: 'round'};
+  if(kind === 'highway') return {color: MAP_PAL.roadHighway, weight: MAP_W.hair, opacity: 0.9, fillColor: MAP_PAL.roadHighway, fillOpacity: MAP_FILL.area, lineJoin: 'round'};
+  return {color: MAP_PAL.roadPublic, weight: MAP_W.hair, opacity: 0.7, fillColor: MAP_PAL.roadPublic, fillOpacity: MAP_FILL.strong, lineJoin: 'round'};
+}
+function renderSpotBuffers(shapes, targetLayer){
+  ['private', 'highway', 'road'].forEach(kind => {
+    const shape = shapes && shapes[kind];
+    if(!shape) return;
+    const pop = spotBufferPopup(kind);
+    const lyr = L.geoJSON(shape, {style: spotBufferStyle(kind), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(targetLayer);
+    try{ lyr.bringToBack(); }catch(e){ /* stub or no renderer */ }
+    const geoms = shape.type === 'FeatureCollection' ? shape.features.map(f => f.geometry) : [shape.geometry];
+    geoms.forEach(g => pushClickable(g, '', pop.label, 'Buffer', pop.html));
+  });
+}
+
 async function runPotentialSpotsSearch(area){
   const noteEl = document.getElementById('mapActionsNote');
   const seq = ++spotSeq;
@@ -1047,6 +1074,27 @@ async function runPotentialSpotsSearch(area){
   const infraChecked = infraZoomOk && !!(roadRes && roadRes.ok);
   const infraDataFailed = infraZoomOk && !infraChecked;
 
+  // v113: exact clipping (src/map/spotclip.js). Every restriction becomes a
+  // polygon and is cut out of the teal/purple shapes, instead of keeping or
+  // dropping whole sample squares. Needs Turf; if it can't load, the old
+  // sample-point method below still runs.
+  let clipEx = null;
+  try{
+    await loadTurf();
+    if(seq !== spotSeq) return;
+    clipEx = buildSpotExclusions({
+      parks: parkRes.ok ? parkRes.features : [],
+      reserves: (reserveRes && reserveRes.ok) ? reserveRes.features : [],
+      closedBans, munis,
+      privateParcels: (allParcelsRes && allParcelsRes.ok) ? allParcelsRes.features.filter(f => ownerCategory(f.properties.OWNER_TYPE) === 'private') : [],
+      roads: allRoads,
+      parcels: (allParcelsRes && allParcelsRes.ok) ? allParcelsRes.features : []
+    }, {infra: infraChecked, privateBufferM: BUILDING_BUFFER_M});
+  }catch(e){ clipEx = null; }
+  if(seq !== spotSeq) return;
+  const CLIP_REASON = {park: 'park', reserve: 'park', closed: 'park', muni: 'muni', road: 'road', highway: 'road', private: 'building'};
+  const CLIP_PARCEL_KINDS = ['park', 'reserve', 'closed', 'muni', 'private', 'road', 'highway'];
+
   spotLayer.clearLayers();
   resetClickableSource('spots'); // v83, see the declaration up top; every push below is now tagged 'spots'
   spotDetails = []; gapDetails = []; restrictedDetails = []; // v45/v57, reset each run so a popup's "i" index always points at this run's detail text, not a stale one from the previous press
@@ -1060,6 +1108,8 @@ async function runPotentialSpotsSearch(area){
   // test against each active cutblock grown by CUTBLOCK_WARN_DISTANCE_M,
   // so "nearby" is approximate). Reveal Road still draws roads on demand.
   renderActiveCutblockBuffers(activeCuts, spotLayer);
+  // v113: Wildlife Act no-shooting areas cut from the spots are drawn too, so a gap they leave is explained
+  if(closedBans.length) try{ drawClosedAreaFeatures(closedBans, spotLayer); }catch(e){ /* visual aid only */ }
   renderActiveCutblockOutlines(activeCuts, spotLayer);
   const activeCutBboxes = activeCuts.filter(c => c.geometry).map(c => expandBboxByMeters(bboxOfGeom(c.geometry), CUTBLOCK_WARN_DISTANCE_M));
   const ACTIVE_LOGGING_ADVISORY = `Active logging within about ${CUTBLOCK_WARN_DISTANCE_M} m, watch for trucks and crews.`;
@@ -1098,6 +1148,25 @@ async function runPotentialSpotsSearch(area){
     const nearRoads = infraChecked ? allRoads.filter(r => r.geometry && bboxesOverlap(pBboxExp, bboxOfLineGeom(r.geometry))) : [];
     const nearBuildings = infraChecked ? buildingAndPrivateRings.filter(ring => bboxesOverlap(pBboxExp, bboxOfRing(ring))) : [];
     const hadSpecialRoute = nearRoads.some(r => r.special);
+    if(clipEx){
+      const r = clipToAllowed({type: 'Feature', properties: {}, geometry: geom}, clipEx, CLIP_PARCEL_KINDS);
+      const label = `Potential spot: ${esc(f.properties.OWNER_TYPE || "Crown / untitled provincial")}`;
+      if(!r.feature){ r.removed.forEach(k => reasonParcelCounts[CLIP_REASON[k]]++); restrictedShown++; return; }
+      if(r.whole){
+        const html = spotPopup(f.properties, advisories, false, infraChecked, hadSpecialRoute);
+        L.geoJSON(f, {style: spotStyle(), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
+        pushClickable(f.geometry, '', label, 'Potential spot', html);
+        shown++;
+        return;
+      }
+      mixedCount++;
+      new Set(Array.from(r.removed).map(k => CLIP_REASON[k])).forEach(k => reasonParcelCounts[k]++);
+      const html = spotPopup(f.properties, advisories, true, infraChecked, hadSpecialRoute);
+      L.geoJSON(r.feature, {style: spotStyle(), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
+      pushClickable(r.feature.geometry, '', label, 'Potential spot', html);
+      shown++;
+      return;
+    }
     const cls = classifyParcelRestrictions(geom, parkEntries, muniEntries, nearRoads, nearBuildings, BUILDING_BUFFER_M, infraChecked);
 
     // bubblingMouseEvents:false throughout this block, same reasoning as
@@ -1160,6 +1229,7 @@ async function runPotentialSpotsSearch(area){
     const allParcelEntries = allParcelsRes.features.map(f => f.geometry).filter(Boolean).map(geom => ({geom, bbox: bboxOfGeom(geom)}));
     const gapSpacingM = gapGridSpacingForBounds(bounds);
     const gapCells = [];
+    const gapPieces = [];
     sampleGridPointsInBounds(bounds, gapSpacingM).forEach(p => {
       // v68/v71: the sampling grid above is generated from a square bounding
       // box (the smallest shape sampleGridPointsInBounds()/Overpass
@@ -1171,6 +1241,20 @@ async function runPotentialSpotsSearch(area){
       if(circleClip){
         const dFromPin = distanceMeters(circleClip.lat, circleClip.lng, p[1], p[0]);
         if(dFromPin > circleClip.radiusM) return;
+      }
+      if(clipEx){
+        // v113: cut every restriction out of this cell instead of testing its centre
+        const r = clipToAllowed(squareAroundPoint(p, gapSpacingM + 1), clipEx); // 1 m overlap so neighbouring cells merge without seams
+        if(!r.feature){ gapExcludedData++; return; }
+        const advisories = [];
+        if(tenures.some(t => pointInGeometry(t.geometry, p))) advisories.push("Crown land tenure (lease/licence/permit) overlaps this point, check for posted restrictions.");
+        if(woodlots.some(w => pointInGeometry(w.geometry, p))) advisories.push("Inside a managed forest licence area, the licensee may have posted access rules.");
+        if(cuts.some(c => pointInGeometry(c.geometry, p))) advisories.push("A forestry opening/cutblock overlaps this point, check for active harvesting or hauling.");
+        if(activeCutBboxes.some(b => bboxContainsPoint(b, p))) advisories.push(ACTIVE_LOGGING_ADVISORY);
+        pushClickable(r.feature.geometry, '', 'No parcel record (presumed Crown)', 'No parcel record', gapPopup(advisories, infraChecked));
+        gapPieces.push(r.feature);
+        gapShown++;
+        return;
       }
       if(pointInAnyGeom(p, allParcelEntries)){ gapExcludedData++; return; } // a parcel record (of any kind) already exists here, not a gap
       if(parks.some(pk => pointInGeometry(pk.geometry, p))){ gapExcludedPark++; return; }
@@ -1199,7 +1283,19 @@ async function runPotentialSpotsSearch(area){
       gapShown++;
     });
     drawGridRegionOutline(gapCells, gapSpacingM, gapOutlineStyle(), spotLayer);
+    if(gapPieces.length){
+      // v113: one merged shape, so the purple reads as a single area with its real edges
+      const region = dissolvePolygons(gapPieces);
+      if(region) L.geoJSON(region, {style: gapRegionStyle(), bubblingMouseEvents:false}).on('click', e => openNearbyFeaturesPopupAt(e.latlng)).addTo(spotLayer);
+    }
     if(allParcelsCapped) gapSkipped = "capped"; // signals the note below without losing the counts already gathered
+  }
+
+  // v113: draw the buffers that cut something away (known only now that the
+  // teal and purple shapes have been clipped), sent to the back of the stack
+  if(clipEx && infraChecked){
+    const sw = bounds.getSouthWest(), ne = bounds.getNorthEast();
+    try{ renderSpotBuffers(spotBufferShapes(clipEx, [sw.lng, sw.lat, ne.lng, ne.lat]), spotLayer); }catch(e){ /* visual aid only; the clipping already applied them */ }
   }
 
   if(noteEl){

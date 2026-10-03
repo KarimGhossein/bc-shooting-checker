@@ -47,6 +47,8 @@ const ROOT = path.resolve(__dirname, '..');
   await page.route('**://cdnjs.cloudflare.com/**leaflet.draw.js', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '// stub' }));
   await page.route('**://cdnjs.cloudflare.com/**.css', route => route.fulfill({ status: 200, contentType: 'text/css', body: '/* stub */' }));
   await page.route('**://fonts.googleapis.com/**', route => route.fulfill({ status: 200, contentType: 'text/css', body: '/* stub */' }));
+  // v113: Shooting Spots now loads Turf for exact clipping; an empty script here makes it fall back to the sample-point method offline
+  await page.route('**/turf.min.js', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '// no turf in this test' }));
 
   // Every WFS layer query runPotentialSpotsSearch() fires (parcels x2, parks,
   // municipalities, tenures, woodlots, cutblocks, active cutting permits,
